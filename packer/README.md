@@ -11,7 +11,7 @@ Pre-requisites:
 2 ISOs are required, save them on isos folder:
 
 * **window.iso** - [Windows 2022 Server](https://www.microsoft.com/en-us/evalcenter/evaluate-windows-server-2022) 
-* **virtio-win.iso** - [Windows Virtio Drivers](https://github.com/virtio-win/virtio-win-pkg-scripts/blob/master/README.md)
+* **virtio.iso** - [Windows Virtio Drivers](https://fedorapeople.org/groups/virt/virtio-win/direct-downloads/archive-virtio/virtio-win-0.1.240-1/virtio-win-0.1.240.iso)
 
 ### Running 
 

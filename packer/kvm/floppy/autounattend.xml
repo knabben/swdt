@@ -9,10 +9,10 @@
                     <Path>a:\</Path>
                 </PathAndCredentials>
                 <PathAndCredentials wcm:action="add" wcm:keyValue="1">
-                    <Path>E:\STORAGE\SERVER_2008\AMD64</Path>
+                    <Path>E:\viostor\2k22\amd64</Path>
                 </PathAndCredentials>
                 <PathAndCredentials wcm:action="add" wcm:keyValue="3">
-                    <Path>E:\NETWORK\SERVER_2008\AMD64</Path>
+                    <Path>E:\NetKVM\2k22\amd64</Path>
                 </PathAndCredentials>
             </DriverPaths>
         </component>

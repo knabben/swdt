@@ -7,13 +7,25 @@ packer {
   }
 }
 
+variable "windows_iso" {
+  type = string
+}
+
+variable "virtio_iso" {
+  type = string
+}
+
+variable "windows_sha256" {
+  type = string
+}
+
 source "qemu" "windows" {
   vm_name     = "win2k22"
   format      = "qcow2"
   accelerator = "kvm"
 
-  iso_url      = "kvm/isos/windows.iso"
-  iso_checksum = "sha256:3e4fa6d8507b554856fc9ca6079cc402df11a8b79344871669f0251535255325"
+  iso_url      = var.windows_iso
+  iso_checksum = var.windows_sha256
 
   cpus   = 4
   memory = 4096
@@ -23,7 +35,7 @@ source "qemu" "windows" {
   disk_interface = "virtio"
 
   floppy_files = ["kvm/floppy/autounattend.xml", "kvm/floppy/openssh.ps1"]
-  qemuargs     = [["-cdrom", "./kvm/isos/virtio-win.iso"]]
+  qemuargs     = [["-cdrom", var.virtio_iso]]
 
   output_directory = "output"
 
