@@ -51,6 +51,7 @@ func NewRootCommand() *cobra.Command {
 	cmd.PersistentFlags().StringP("config", "c", "samples/config.yaml", "Configuration file path.")
 
 	cmd.AddCommand(setupCmd)
+	cmd.AddCommand(startCmd)
 	cmd.AddCommand(kubernetesCmd)
 
 	return cmd
