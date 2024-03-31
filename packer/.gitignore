@@ -1,2 +1,3 @@
 output/
 isos/
+kvm/floppy/ssh_key.pub

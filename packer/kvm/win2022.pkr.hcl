@@ -34,18 +34,22 @@ source "qemu" "windows" {
   disk_size      = "15G"
   disk_interface = "virtio"
 
-  floppy_files = ["kvm/floppy/autounattend.xml", "kvm/floppy/openssh.ps1"]
-  qemuargs     = [["-cdrom", var.virtio_iso]]
+  floppy_files = [
+    "kvm/floppy/autounattend.xml",
+    "kvm/floppy/openssh.ps1",
+    "kvm/floppy/ssh_key.pub"
+  ]
+  qemuargs = [["-cdrom", var.virtio_iso]]
 
   output_directory = "output"
 
-  communicator   = "ssh"
+  communicator = "ssh"
   ssh_username = "Administrator"
   ssh_password = "S3cr3t0!"
-  ssh_timeout = "1h"
+  ssh_timeout  = "1h"
 
   boot_wait        = "10s"
-  shutdown_command = "shutdown /s /t 30 /f"
+  shutdown_command = "shutdown /s /t 5 /f"
   shutdown_timeout = "15m"
 }
 
