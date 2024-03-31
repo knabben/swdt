@@ -52,6 +52,7 @@ func NewRootCommand() *cobra.Command {
 
 	cmd.AddCommand(setupCmd)
 	cmd.AddCommand(startCmd)
+	cmd.AddCommand(destroyCmd)
 	cmd.AddCommand(kubernetesCmd)
 
 	return cmd

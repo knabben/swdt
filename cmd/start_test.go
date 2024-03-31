@@ -20,7 +20,7 @@ func TestStartMinikube(t *testing.T) {
 	}
 	err := startMinikube(fn)
 	assert.Nil(t, err)
-	assert.Equal(t, 2, called)
+	assert.Equal(t, 1, called)
 }
 
 func TestStartWindowsVMValidateDisk(t *testing.T) {

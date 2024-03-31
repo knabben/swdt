@@ -116,10 +116,6 @@ func alreadyExists(err error) bool {
 
 // startMinikube initialize a minikube control plane.
 func startMinikube(executor interface{}) (err error) {
-	// Delete minikube if already exists.
-	if err = exec.Execute(executor, "minikube", "delete", "--purge"); err != nil {
-		return err
-	}
 	// Start minikube with KVM2 machine
 	if err = exec.Execute(executor, "minikube", "start", "--driver", "kvm2"); err != nil {
 		return err
