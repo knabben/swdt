@@ -17,14 +17,17 @@ limitations under the License.
 package cmd
 
 import (
-	"github.com/docker/docker/pkg/homedir"
 	"github.com/pkg/errors"
-	"github.com/spf13/cobra"
-	"libvirt.org/go/libvirt"
 	"log"
 	"path/filepath"
+	"strings"
+
 	"swdt/pkg/drivers"
 	"swdt/pkg/exec"
+
+	"github.com/docker/docker/pkg/homedir"
+	"github.com/spf13/cobra"
+	"libvirt.org/go/libvirt"
 )
 
 // startCmd represents the start command
@@ -50,28 +53,47 @@ func init() {
 }
 
 func RunStart(cmd *cobra.Command, args []string) error {
+	var err error
+	if err = validateFlags(); err != nil {
+		return err
+	}
+	if triggerMinikube {
+		if err := startMinikube(exec.RunCommand); err != nil {
+			return err
+		}
+	}
+	// Start the Windows VM on LibVirt
+	return startWindowsVM()
+}
+
+func validateFlags() error {
+	if diskPath == "" {
+		return errors.New("No disk path is passed. Use the disk-path argument to bring the Windows image.")
+	}
+	return nil
+}
+
+// startWindowsVM create the Windows libvirt domain and start it.
+func startWindowsVM() error {
 	var (
 		conn *libvirt.Connect
 		dom  *libvirt.Domain
 		err  error
 	)
-	if triggerMinikube {
-		if err = startMinikube(); err != nil {
-			return err
-		}
-	}
+
 	// Start the Libvirt connection with kvm Qemu URI
 	if conn, err = libvirt.NewConnect(kvmQemuURI); err != nil {
 		return err
 	}
 	log.Println("Creating domain...")
-	if diskPath == "" {
-		return errors.New("No disk path is passed. Use the disk-path argument to bring the Windows image.")
-	}
 	drv := drivers.NewDriver(diskPath, sshKey)
 
 	// Create the libvirt domain
 	if dom, err = drivers.CreateDomain(conn, drv); err != nil {
+		// Domain already exists, skipping the Windows creation.
+		if alreadyExists(err) {
+			return nil
+		}
 		return err
 	}
 	defer func() {
@@ -80,6 +102,7 @@ func RunStart(cmd *cobra.Command, args []string) error {
 			err = ferr
 		}
 	}()
+
 	// Start the Windows created domain.
 	if err = drv.Start(); err != nil {
 		return err
@@ -87,14 +110,18 @@ func RunStart(cmd *cobra.Command, args []string) error {
 	return nil
 }
 
+func alreadyExists(err error) bool {
+	return strings.Contains(err.Error(), "already exists with")
+}
+
 // startMinikube initialize a minikube control plane.
-func startMinikube() (err error) {
+func startMinikube(executor interface{}) (err error) {
 	// Delete minikube if already exists.
-	if err = exec.Execute("minikube", "delete", "--purge"); err != nil {
+	if err = exec.Execute(executor, "minikube", "delete", "--purge"); err != nil {
 		return err
 	}
 	// Start minikube with KVM2 machine
-	if err = exec.Execute("minikube", "start", "--driver", "kvm2"); err != nil {
+	if err = exec.Execute(executor, "minikube", "start", "--driver", "kvm2"); err != nil {
 		return err
 	}
 	return nil

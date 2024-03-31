@@ -8,8 +8,12 @@ import (
 	"sync"
 )
 
-func Execute(cmd string, args ...string) (err error) {
-	command := buildCmd(cmd, args...)
+func Execute(runner interface{}, cmd string, args ...string) error {
+	return runner.(func(cmd string, args ...string) error)(cmd, args...)
+}
+
+func RunCommand(cmd string, args ...string) error {
+	command := exec.Command(cmd, args...)
 
 	stdout, err := command.StdoutPipe()
 	if err != nil {
@@ -31,7 +35,6 @@ func Execute(cmd string, args ...string) (err error) {
 	go func() {
 		err := redirectOutput(&wg, stdout)
 		if err != nil {
-
 		}
 	}()
 	if err = redirectOutput(nil, stderr); err != nil {
@@ -39,11 +42,8 @@ func Execute(cmd string, args ...string) (err error) {
 	}
 
 	wg.Wait()
-	return command.Wait()
-}
-
-func buildCmd(cmd string, args ...string) *exec.Cmd {
-	return exec.Command(cmd, args...)
+	command.Wait()
+	return nil
 }
 
 func redirectOutput(wg *sync.WaitGroup, stdout io.ReadCloser) error {

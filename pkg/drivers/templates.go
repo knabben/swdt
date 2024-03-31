@@ -129,7 +129,7 @@ func macFromXML(conn *libvirt.Connect, domain, network string) (string, error) {
 
 	for _, i := range domIfs {
 		if i.Source.Network == network {
-			log.Println("domain %s has defined MAC address %s in network %s", domain, i.Mac.Address, network)
+			log.Printf("domain %s has defined MAC address %s in network %s\n", domain, i.Mac.Address, network)
 			return i.Mac.Address, nil
 		}
 	}
