@@ -13,6 +13,8 @@ Pre-requisites:
 * **window.iso** - [Windows 2022 Server](https://www.microsoft.com/en-us/evalcenter/evaluate-windows-server-2022) 
 * **virtio.iso** - [Windows Virtio Drivers](https://fedorapeople.org/groups/virt/virtio-win/direct-downloads/archive-virtio/virtio-win-0.1.240-1/virtio-win-0.1.240.iso)
 
+A SSH key is required to exist on `~/.ssh/id_rsa.pub`, changeable in the Makefile.
+
 ### Running 
 
 ```shell
