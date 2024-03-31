@@ -16,7 +16,7 @@ import (
 
 var (
 	network        = "default"
-	privateNetwork = "minikube-dev"
+	privateNetwork = "mk-minikube"
 )
 
 func NewDriver(diskPath, sshKeyPath string) *kvm.Driver {
