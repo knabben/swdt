@@ -42,16 +42,16 @@ const (
 )
 
 type SSHConnection struct {
-	credentials *v1alpha1.CredentialsSpec
-	client      *ssh.Client
+	creds  *v1alpha1.SSHSpec
+	client *ssh.Client
 }
 
 // fetchAuthMethod fetches all available authentication methods
 func (c *SSHConnection) fetchAuthMethod() (authMethod []ssh.AuthMethod, err error) {
 	var (
 		file       *os.File
-		privateKey = c.credentials.PrivateKey
-		password   = c.credentials.Password
+		privateKey = c.creds.PrivateKey
+		password   = c.creds.Password
 		content    []byte
 		signer     ssh.Signer
 	)
@@ -85,9 +85,9 @@ func (c *SSHConnection) Connect() error {
 		return err
 	}
 
-	klog.V(2).Infof("SSH connecting to '%s' as '%s'\n", c.credentials.Hostname, c.credentials.Username)
-	client, err := ssh.Dial(TCP_TYPE, c.credentials.Hostname, &ssh.ClientConfig{
-		User:            c.credentials.Username,
+	klog.V(2).Infof("SSH connecting to '%s' as '%s'\n", c.creds.Hostname, c.creds.Username)
+	client, err := ssh.Dial(TCP_TYPE, c.creds.Hostname, &ssh.ClientConfig{
+		User:            c.creds.Username,
 		Auth:            authMethod,
 		HostKeyCallback: ssh.InsecureIgnoreHostKey(),
 	})

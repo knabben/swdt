@@ -25,7 +25,7 @@ import (
 )
 
 func TestRunWithoutConnect(t *testing.T) {
-	credentials := v1alpha1.CredentialsSpec{}
+	credentials := &v1alpha1.SSHSpec{}
 	conn := NewConnection(credentials)
 	assert.NotEqual(t, conn, nil)
 	out, err := conn.Run("ls")
@@ -45,7 +45,7 @@ func TestConnect(t *testing.T) {
 	hostname := tests.GetHostname("2023")
 	tests.NewServer(hostname, expected)
 
-	credentials := v1alpha1.CredentialsSpec{
+	credentials := &v1alpha1.SSHSpec{
 		Hostname: hostname,
 		Username: tests.Username,
 		Password: tests.FakePassword,

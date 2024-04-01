@@ -34,18 +34,18 @@ var kubernetesCmd = &cobra.Command{
 
 func RunKubernetes(cmd *cobra.Command, args []string) error {
 	var (
-		err        error
-		nodeConfig *v1alpha1.Node
+		err    error
+		config *v1alpha1.Cluster
 	)
-	if nodeConfig, err = loadConfiguration(cmd); err != nil {
+	if config, err = loadConfiguration(cmd); err != nil {
 		return err
 	}
 
-	runner, err := executor.NewRunner(nodeConfig, &kubernetes.KubernetesRunner{})
+	runner, err := executor.NewRunner(config, &kubernetes.KubernetesRunner{})
 	if err != nil {
 		return err
 	}
 	defer runner.CloseConnection() // nolint
 
-	return runner.Inner.InstallProvisioners(nodeConfig.Spec.Kubernetes.Provisioners)
+	return runner.Inner.InstallProvisioners(config.Spec.Workload.Provisioners)
 }

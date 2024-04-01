@@ -28,11 +28,17 @@ func TestMultipleExecutors(t *testing.T) {
 	assert.Nil(t, err)
 }
 
-func createNodeConfig(hostname string) *v1alpha1.Node {
-	credentials := v1alpha1.CredentialsSpec{
+func createNodeConfig(hostname string) *v1alpha1.Cluster {
+	credentials := v1alpha1.SSHSpec{
 		Hostname: hostname,
 		Username: tests.Username,
 		Password: tests.FakePassword,
 	}
-	return &v1alpha1.Node{Spec: v1alpha1.NodeSpec{Cred: credentials}}
+	return &v1alpha1.Cluster{Spec: v1alpha1.ClusterSpec{
+		Workload: v1alpha1.WorkloadSpec{
+			Virtualization: v1alpha1.VirtualizationSpec{
+				SSH: &credentials,
+			},
+		},
+	}}
 }

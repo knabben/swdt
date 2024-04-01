@@ -33,7 +33,7 @@ func TestInstallChocoPackages(t *testing.T) {
 	pkgs := []string{"vim", "grep"}
 
 	r := SetupRunner{run: validateRun}
-	config := v1alpha1.SetupSpec{ChocoPackages: &pkgs}
+	config := v1alpha1.AuxiliarySpec{ChocoPackages: &pkgs}
 	err := r.InstallChocoPackages(*config.ChocoPackages)
 	assert.Nil(t, err)
 
@@ -47,7 +47,7 @@ func TestInstallChocoPackages(t *testing.T) {
 func TestEnableRDP(t *testing.T) {
 	var defaultTrue = true
 	r := SetupRunner{run: validateRun}
-	config := v1alpha1.SetupSpec{EnableRDP: &defaultTrue}
+	config := v1alpha1.AuxiliarySpec{EnableRDP: &defaultTrue}
 
 	err := r.EnableRDP(*config.EnableRDP)
 	assert.Nil(t, err)

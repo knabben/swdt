@@ -34,15 +34,15 @@ var setupCmd = &cobra.Command{
 
 func RunSetup(cmd *cobra.Command, args []string) error {
 	var (
-		err        error
-		nodeConfig *v1alpha1.Node
+		err    error
+		config *v1alpha1.Cluster
 	)
 
-	if nodeConfig, err = loadConfiguration(cmd); err != nil {
+	if config, err = loadConfiguration(cmd); err != nil {
 		return err
 	}
 
-	runner, err := executor.NewRunner(nodeConfig, &setup.SetupRunner{})
+	runner, err := executor.NewRunner(config, &setup.SetupRunner{})
 	if err != nil {
 		return err
 	}
@@ -54,10 +54,10 @@ func RunSetup(cmd *cobra.Command, args []string) error {
 	}
 
 	// Install Choco packages from the input list
-	if err = runner.Inner.InstallChocoPackages(*nodeConfig.Spec.Setup.ChocoPackages); err != nil {
+	if err = runner.Inner.InstallChocoPackages(*config.Spec.Workload.Auxiliary.ChocoPackages); err != nil {
 		return err
 	}
 
 	// Enable RDP if the option is true
-	return runner.Inner.EnableRDP(*nodeConfig.Spec.Setup.EnableRDP)
+	return runner.Inner.EnableRDP(*config.Spec.Workload.Auxiliary.EnableRDP)
 }

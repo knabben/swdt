@@ -75,7 +75,7 @@ type WorkloadSpec struct {
 	Virtualization VirtualizationSpec `json:"virtualization,omitempty"`
 
 	// Auxiliary defines the specification for 3rd party procedures in the node.
-	Auxiliary AuxiliarySpec `json:"auxiliary,omitempty"`
+	Auxiliary *AuxiliarySpec `json:"auxiliary,omitempty"`
 
 	// Provisioners defines the binaries installations
 	Provisioners []ProvisionerSpec `json:"provisioners"`
@@ -93,8 +93,8 @@ type ClusterSpec struct {
 	// Version is the Kubernetes version being installed in the cluster
 	Version string `json:"version,omitempty"`
 
-	ControlPlane *ControlPlaneSpec `json:"controlPlane,omitempty"`
-	Workload     *WorkloadSpec     `json:"workload,omitempty"`
+	ControlPlane ControlPlaneSpec `json:"controlPlane,omitempty"`
+	Workload     WorkloadSpec     `json:"workload,omitempty"`
 }
 
 // ClusterStatus -- tbd

@@ -34,6 +34,6 @@ type Connection interface {
 	Close() error
 }
 
-func NewConnection(credentials v1alpha1.CredentialsSpec) Connection {
-	return &SSHConnection{credentials: &credentials}
+func NewConnection(credentials *v1alpha1.SSHSpec) Connection {
+	return &SSHConnection{creds: credentials}
 }

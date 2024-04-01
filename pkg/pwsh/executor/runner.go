@@ -29,8 +29,8 @@ func (r *Runner[R]) CloseConnection() error {
 }
 
 // NewRunner returns a new encapsulated Runner to be reused on specialized commands.
-func NewRunner[R RunnerInterface](nodeConfig *v1alpha1.Node, run R) (*Runner[R], error) {
-	conn := connections.NewConnection(nodeConfig.Spec.Cred)
+func NewRunner[R RunnerInterface](cluster *v1alpha1.Cluster, run R) (*Runner[R], error) {
+	conn := connections.NewConnection(cluster.Spec.Workload.Virtualization.SSH)
 	if err := conn.Connect(); err != nil {
 		return nil, err
 	}

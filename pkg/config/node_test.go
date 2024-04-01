@@ -25,7 +25,7 @@ import (
 const (
 	SAMPLE_FILE    = "../../samples/config.yaml"
 	SAMPLE_DEFAULT = `apiVersion: windows.k8s.io/v1alpha1
-kind: Node
+kind: Cluster
 metadata:
   name: sample
 spec:`
@@ -35,18 +35,18 @@ func TestLoadConfigNodeDefaults(t *testing.T) {
 	config, err := loadConfigNode([]byte(SAMPLE_DEFAULT))
 	assert.Nil(t, err)
 
-	assert.True(t, *config.Spec.Setup.EnableRDP)
-	assert.Len(t, *config.Spec.Setup.ChocoPackages, 0)
+	assert.True(t, *config.Spec.Workload.Auxiliary.EnableRDP)
+	assert.Len(t, *config.Spec.Workload.Auxiliary.ChocoPackages, 0)
 }
 
 func TestLoadConfigNode(t *testing.T) {
 	config, err := LoadConfigNodeFromFile(SAMPLE_FILE)
 	assert.Nil(t, err)
 
-	assert.True(t, *config.Spec.Setup.EnableRDP)
-	assert.Equal(t, len(*config.Spec.Setup.ChocoPackages), 2)
+	assert.True(t, *config.Spec.Workload.Auxiliary.EnableRDP)
+	assert.Equal(t, len(*config.Spec.Workload.Auxiliary.ChocoPackages), 2)
 
-	provisioners := config.Spec.Kubernetes.Provisioners
+	provisioners := config.Spec.Workload.Provisioners
 	assert.Len(t, provisioners, 2)
 
 	for _, d := range provisioners {

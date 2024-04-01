@@ -59,6 +59,7 @@ func NewRootCommand() *cobra.Command {
 }
 
 // loadConfiguration marshal the YAML configuration in an internal struct
-func loadConfiguration(cmd *cobra.Command) (*v1alpha1.Node, error) {
-	return config.LoadConfigNodeFromFile(cmd.Flag("config").Value.String())
+func loadConfiguration(cmd *cobra.Command) (*v1alpha1.Cluster, error) {
+	cfg := cmd.Flag("config").Value.String()
+	return config.LoadConfigNodeFromFile(cfg)
 }

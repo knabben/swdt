@@ -4,10 +4,8 @@ metadata:
   name: config-cluster
 spec:
   version: v1.29.0
-
   controlPlane:
     minikube: true
-
   workload:
     virtualization:
       kvmQemuURI: "qemu:///system"
@@ -15,14 +13,12 @@ spec:
       ssh:
         username: "Administrator"
         hostname: "192.168.122.220:22"  # autofilling if not passed
-        key: "/home/<user>/.ssh/id_rsa"
-
+        privateKey: "/home/<user>/.ssh/id_rsa"
     auxiliary:
       enableRDP: true
       chocoPackages:
       - vim
       - grep
-
     provisioners:
     - name: containerd
       version: 1.7.11

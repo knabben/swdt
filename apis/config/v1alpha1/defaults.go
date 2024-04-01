@@ -21,11 +21,14 @@ var defaultTrue = true
 // todo(knabben): this is not the best approach and a workaround for the CLI.
 
 // Defaults must be called to fill out the empty values
-func (c *NodeSpec) Defaults() {
-	if c.Setup.EnableRDP == nil {
-		c.Setup.EnableRDP = &defaultTrue
+func (c *ClusterSpec) Defaults() {
+	if c.Workload.Auxiliary == nil {
+		c.Workload.Auxiliary = &AuxiliarySpec{}
 	}
-	if c.Setup.ChocoPackages == nil {
-		c.Setup.ChocoPackages = &[]string{}
+	if c.Workload.Auxiliary.EnableRDP == nil {
+		c.Workload.Auxiliary.EnableRDP = &defaultTrue
+	}
+	if c.Workload.Auxiliary.ChocoPackages == nil {
+		c.Workload.Auxiliary.ChocoPackages = &[]string{}
 	}
 }

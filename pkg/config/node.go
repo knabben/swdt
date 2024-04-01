@@ -38,7 +38,7 @@ func init() {
 }
 
 // LoadConfigNodeFromFile LoadConfigFromFile returns the marshalled Node configuration object
-func LoadConfigNodeFromFile(file string) (*v1alpha1.Node, error) {
+func LoadConfigNodeFromFile(file string) (*v1alpha1.Cluster, error) {
 	klog.V(2).Infof("Loading node configuration from '%s'", file)
 
 	data, err := os.ReadFile(file)
@@ -49,13 +49,13 @@ func LoadConfigNodeFromFile(file string) (*v1alpha1.Node, error) {
 }
 
 // loadConfig decode the input read YAML into a configuration object
-func loadConfigNode(data []byte) (*v1alpha1.Node, error) {
+func loadConfigNode(data []byte) (*v1alpha1.Cluster, error) {
 	var deserializer = codecs.UniversalDeserializer()
 	configObj, gvk, err := deserializer.Decode(data, nil, nil)
 	if err != nil {
 		return nil, err
 	}
-	config, ok := configObj.(*v1alpha1.Node)
+	config, ok := configObj.(*v1alpha1.Cluster)
 	if !ok {
 		return nil, fmt.Errorf("got unexpected config type: %v", gvk)
 	}
