@@ -1,6 +1,8 @@
 # Design document for the SWDT CLI
 
-This document is a reference for decisions regarding multi-OS support architecture. It is developed with Cobra/spf13 to conform to a stable namespace and different connection libraries to support remote command execution.
+<img src=".assets/logo.png" width="250" height="250">
+
+This document is a reference for the *Wave (Windows Automated Virtual Environment)* decisions regarding multi-OS support architecture. It is developed with Cobra/spf13 to conform to a stable namespace and different connection libraries to support remote command execution.
 
 Follow the [docs](../../docs) for more information.
 
@@ -8,9 +10,11 @@ Follow the [docs](../../docs) for more information.
 
 These are the current supported subcommands for the program:
 
-* `swdt setup`
-  * Initialize the node setup, enabling RDP, installing Choco and packages, etc.
-* `swdt kubernetes`
+* `swdt start`
+  * Initialize the entire Cluster, the control plane is supported using Minikube, the Windows node is started by Libvirt.  
+* `swdt aux`
+  * Initialize the node auxiliary tools and procedures like enabling RDP, installing Choco and packages, etc.
+* `swdt copy`
   * Deploy Kubernetes binaries from the HTTP server indicated in the configuration.
 * `swdt readiness`
   * Run the [windows operational readiness](https://github.com/kubernetes-sigs/windows-operational-readiness) project in the local cluster
