@@ -1,18 +1,28 @@
 apiVersion: windows.k8s.io/v1alpha1
-kind: Node
+kind: Cluster
 metadata:
-  name: sample
+  name: config-cluster
 spec:
-  credentials:
-    username: "Administrator"
-    hostname: "192.168.122.220:22"
-    privateKey: "/home/<user>/.ssh/id_rsa"
-  setup:
-    enableRDP: true
-    chocoPackages:
-    - vim
-    - grep
-  kubernetes:
+  version: v1.29.0
+
+  controlPlane:
+    minikube: true
+
+  workload:
+    virtualization:
+      kvmQemuURI: "qemu:///system"
+      diskPath: "path"
+      ssh:
+        username: "Administrator"
+        hostname: "192.168.122.220:22"  # autofilling if not passed
+        key: "/home/<user>/.ssh/id_rsa"
+
+    auxiliary:
+      enableRDP: true
+      chocoPackages:
+      - vim
+      - grep
+
     provisioners:
     - name: containerd
       version: 1.7.11

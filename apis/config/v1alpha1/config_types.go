@@ -20,6 +20,38 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
+type SSHSpec struct {
+	// Username set the Windows user
+	Username string `json:"username,omitempty"`
+
+	// Hostname set the Windows node endpoint
+	Hostname string `json:"hostname,omitempty"`
+
+	// Password is the SSH password for this user
+	Password string `json:"password,omitempty"`
+
+	// PrivateKey is the SSH private path for this user
+	PrivateKey string `json:"privateKey,omitempty"`
+}
+
+type VirtualizationSpec struct {
+	// KVM Qemu URI is the path of qemu socket URI
+	KvmQemuURI string `json:"kvmQemuURI,omitempty"`
+	// DiskPath is the path of the Windows qcow2 file.
+
+	DiskPath string `json:"diskPath,omitempty"`
+
+	// SSH stored the Windows VM credentials.
+	SSH *SSHSpec `json:"ssh,omitempty"`
+}
+
+type AuxiliarySpec struct {
+	// EnableRDP set up the remote desktop service and enable firewall for it.
+	EnableRDP *bool `json:"enableRDP"`
+	// ChocoPackages provides a list of packages automatically installed in the node.
+	ChocoPackages *[]string `json:"chocoPackages,omitempty"`
+}
+
 type ProvisionerSpec struct {
 	// Name of the service to be deployed
 	Name string `json:"name,omitempty"`
@@ -37,66 +69,59 @@ type ProvisionerSpec struct {
 	Overwrite bool `json:"overwrite,omitempty"`
 }
 
-type KubernetesSpec struct {
-	// Provisioners list the objects to be deployed
+// WorkloadSpec defines the workload specification
+type WorkloadSpec struct {
+	// Virtualization defines libvirt configuration.
+	Virtualization VirtualizationSpec `json:"virtualization,omitempty"`
+
+	// Auxiliary defines the specification for 3rd party procedures in the node.
+	Auxiliary AuxiliarySpec `json:"auxiliary,omitempty"`
+
+	// Provisioners defines the binaries installations
 	Provisioners []ProvisionerSpec `json:"provisioners"`
 }
 
-type CredentialsSpec struct {
-	// Username set the Windows user
-	Username string `json:"username,omitempty"`
-
-	// Hostname set the Windows node endpoint
-	Hostname string `json:"hostname,omitempty"`
-
-	// Password is the SSH password for this user
-	Password string `json:"password,omitempty"`
-
-	// PrivateKey is the SSH private path for this user
-	PrivateKey string `json:"privateKey,omitempty"`
+// ControlPlaneSpec defines the control plane specification
+type ControlPlaneSpec struct {
+	// Minikube set the control plane installation via minikube
+	// otherwise the kubeconfig is being used
+	Minikube bool `json:"minikube,omitempty"`
 }
 
-type SetupSpec struct {
-	// EnableRDP set up the remote desktop service and enable firewall for it.
-	EnableRDP *bool `json:"enableRDP"`
+// ClusterSpec defines the desired state of the Cluster
+type ClusterSpec struct {
+	// Version is the Kubernetes version being installed in the cluster
+	Version string `json:"version,omitempty"`
 
-	// ChocoPackages provides a list of packages automatically installed in the node.
-	ChocoPackages *[]string `json:"chocoPackages,omitempty"`
+	ControlPlane *ControlPlaneSpec `json:"controlPlane,omitempty"`
+	Workload     *WorkloadSpec     `json:"workload,omitempty"`
 }
 
-// NodeSpec defines the desired state of Node
-type NodeSpec struct {
-	Cred       CredentialsSpec `json:"credentials,omitempty"`
-	Setup      SetupSpec       `json:"setup,omitempty"`
-	Kubernetes KubernetesSpec  `json:"kubernetes,omitempty"`
-}
-
-// NodeStatus -- tbd
-type NodeStatus struct {
-}
+// ClusterStatus -- tbd
+type ClusterStatus struct{}
 
 //+kubebuilder:object:root=true
 //+kubebuilder:subresource:status
 //+k8s:defaulter-gen=true
 
-// Node is the Schema for the configs API
-type Node struct {
+// Cluster is the Schema for the configuration API
+type Cluster struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
-	Spec   NodeSpec   `json:"spec,omitempty"`
-	Status NodeStatus `json:"status,omitempty"`
+	Spec   ClusterSpec   `json:"spec,omitempty"`
+	Status ClusterStatus `json:"status,omitempty"`
 }
 
 //+kubebuilder:object:root=true
 
-// NodeList contains a list of Node
-type NodeList struct {
+// ClusterList contains a list of Node
+type ClusterList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
-	Items           []Node `json:"items"`
+	Items           []Cluster `json:"items"`
 }
 
 func init() {
-	SchemeBuilder.Register(&Node{}, &NodeList{})
+	SchemeBuilder.Register(&Cluster{}, &ClusterList{})
 }
