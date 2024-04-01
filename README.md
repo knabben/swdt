@@ -1,6 +1,8 @@
 # Design document for the SWDT CLI
 
-<img src=".assets/logo.png" width="250" height="250">
+<p align="center">
+  <img src=".assets/logo.png" width="250" height="250">
+</p>
 
 This document is a reference for the *Wave (Windows Automated Virtual Environment)* decisions regarding multi-OS support architecture. It is developed with Cobra/spf13 to conform to a stable namespace and different connection libraries to support remote command execution.
 
