@@ -2,51 +2,44 @@ package exec
 
 import (
 	"bufio"
-	"fmt"
 	"io"
 	"os/exec"
 	"sync"
 )
 
-func Execute(runner interface{}, cmd string, args ...string) error {
-	return runner.(func(cmd string, args ...string) error)(cmd, args...)
+func Execute(runner interface{}, cmd string, args ...string) (string, error) {
+	return runner.(func(cmd string, args ...string) (string, error))(cmd, args...)
 }
 
-func RunCommand(cmd string, args ...string) error {
+func RunCommand(cmd string, args ...string) (string, error) {
 	command := exec.Command(cmd, args...)
 
 	stdout, err := command.StdoutPipe()
 	if err != nil {
-		return err
+		return "", err
 	}
-	stderr, err := command.StderrPipe()
+	_, err = command.StderrPipe()
 	if err != nil {
-		return err
+		return "", err
 	}
 
 	// Start and run test command with arguments
 	if err := command.Start(); err != nil {
-		return err
+		return "", err
 	}
 
-	var wg sync.WaitGroup
-	wg.Add(1)
-
-	go func() {
-		err := redirectOutput(&wg, stdout)
-		if err != nil {
-		}
-	}()
-	if err = redirectOutput(nil, stderr); err != nil {
-		return err
+	var output string
+	output, err = redirectOutput(nil, stdout)
+	if err != nil {
+		return "", err
 	}
 
-	wg.Wait()
 	command.Wait()
-	return nil
+
+	return output, err
 }
 
-func redirectOutput(wg *sync.WaitGroup, stdout io.ReadCloser) error {
+func redirectOutput(wg *sync.WaitGroup, stdout io.ReadCloser) (string, error) {
 	if wg != nil {
 		defer wg.Done()
 	}
@@ -56,11 +49,12 @@ func redirectOutput(wg *sync.WaitGroup, stdout io.ReadCloser) error {
 	buf := make([]byte, 0, maxBufferSize)
 	scanner.Buffer(buf, maxBufferSize)
 	scanner.Split(bufio.ScanLines)
+	var output string
 	for scanner.Scan() {
-		fmt.Println(scanner.Text())
+		output += scanner.Text() + "\n"
 	}
 	if err := scanner.Err(); err != nil {
-		return err
+		return "", err
 	}
-	return nil
+	return output, nil
 }

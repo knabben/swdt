@@ -87,7 +87,7 @@ func (c *SSHConnection) Connect() error {
 	}
 
 	klog.V(2).Infof("SSH connecting to '%s' as '%s'\n", c.creds.Hostname, c.creds.Username)
-	client, err := ssh.Dial(TCP_TYPE, fmt.Sprintf("%s:22", c.creds.Hostname), &ssh.ClientConfig{
+	client, err := ssh.Dial(TCP_TYPE, fmt.Sprintf("%s", c.creds.Hostname), &ssh.ClientConfig{
 		User:            c.creds.Username,
 		Auth:            authMethod,
 		HostKeyCallback: ssh.InsecureIgnoreHostKey(),
@@ -118,7 +118,7 @@ func (c *SSHConnection) Run(args string) (string, error) {
 
 	// Multiline PowerShell commands over SSH trip over newlines - only first one is executed
 	args = regexp.MustCompile(`\r?\n`).ReplaceAllLiteralString(args, ";")
-	cmd := fmt.Sprintf("powershell -NoLogo -Command %v", args)
+	cmd := fmt.Sprintf(`powershell -NoLogo -Command "%v"`, args)
 	klog.V(2).Infof("SSH executing PowerShell command: %s\n", cmd)
 	if err := session.Run(cmd); err != nil {
 		return "", err

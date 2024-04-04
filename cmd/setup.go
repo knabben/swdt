@@ -18,12 +18,17 @@ package cmd
 
 import (
 	"log"
+
+	"github.com/spf13/cobra"
 	"swdt/apis/config/v1alpha1"
 	"swdt/pkg/drivers"
 	"swdt/pkg/pwsh/executor"
 	"swdt/pkg/pwsh/setup"
+)
 
-	"github.com/spf13/cobra"
+var (
+	windowsHost      = "win2k22"
+	controlPlaneHost = "minikube"
 )
 
 // setupCmd represents the setup command
@@ -44,15 +49,18 @@ func RunSetup(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
+	var leases map[string]string
+	if leases, err = findPrivateIPs(config); err != nil {
+		return err
+	}
 	// Find the IP of the Windows machine grabbing from the domain
 	if config.Spec.Workload.Virtualization.SSH.Hostname == "" {
-		var ipAddr string
-		if ipAddr, err = findWindowsIP(config); err != nil {
-			return err
-		}
-		config.Spec.Workload.Virtualization.SSH.Hostname = ipAddr
+		config.Spec.Workload.Virtualization.SSH.Hostname = leases[windowsHost] + ":22"
 	}
+	// Find the control plane IP
+	controlPlaneIP := leases[controlPlaneHost]
 
+	// Starting the SSH executor
 	runner, err := executor.NewRunner(config, &setup.SetupRunner{})
 	if err != nil {
 		return err
@@ -73,22 +81,43 @@ func RunSetup(cmd *cobra.Command, args []string) error {
 			return err
 		}
 	}
+
 	// Enable RDP if option is true
-	if err = runner.Inner.EnableRDP(*config.Spec.Workload.Auxiliary.EnableRDP); err != nil {
+	rdp := config.Spec.Workload.Auxiliary.EnableRDP
+	if err = runner.Inner.EnableRDP(*rdp); err != nil {
 		return err
 	}
 
-	return runner.Inner.InstallContainerd(config.Spec.Workload.ContainerdVersion)
+	// Installing Containerd with predefined version
+	containerd := config.Spec.Workload.ContainerdVersion
+	if err = runner.Inner.InstallContainerd(containerd); err != nil {
+		return err
+	}
+
+	// Installing Kubeadm and Kubelet binaries in the host
+	kubernetes := config.Spec.Workload.KubernetesVersion
+	if err = runner.Inner.InstallKubernetes(kubernetes); err != nil {
+		return err
+	}
+
+	// Joining the Windows node in the control plane.
+	cpKubernetes := config.Spec.ControlPlane.KubernetesVersion
+	if err = runner.Inner.JoinNode(cpKubernetes, controlPlaneIP); err != nil {
+		return err
+	}
+
+	return nil
 }
 
-func findWindowsIP(config *v1alpha1.Cluster) (string, error) {
-	drv, err := drivers.NewDriver(config)
+// findPrivateIPs returns the leased ips from the domain.
+func findPrivateIPs(config *v1alpha1.Cluster) (leases map[string]string, err error) {
+	var drv *drivers.Driver
+	drv, err = drivers.NewDriver(config)
 	if err != nil {
-		return "", err
+		return
 	}
-	var ipAddr string
-	if ipAddr, err = drv.GetPrivWindowsIPAddress(); err != nil {
-		return "", err
+	if leases, err = drv.GetLeasedIPs(drivers.PrivateNetwork); err != nil {
+		return
 	}
-	return ipAddr, err
+	return
 }

@@ -13,20 +13,12 @@ func TestAlreadyExists(t *testing.T) {
 }
 
 func TestStartMinikube(t *testing.T) {
-	var called int = 0
-	fn := func(cmd string, args ...string) error {
+	var called = 0
+	fn := func(cmd string, args ...string) (string, error) {
 		called += 1
-		return nil
+		return "", nil
 	}
-	err := startMinikube(fn)
+	err := startMinikube(fn, "v1.29.0")
 	assert.Nil(t, err)
 	assert.Equal(t, 1, called)
-}
-
-func TestStartWindowsVMValidateDisk(t *testing.T) {
-	diskPath = ""
-	assert.Error(t, validateFlags())
-
-	diskPath = "some-path"
-	assert.Nil(t, validateFlags())
 }

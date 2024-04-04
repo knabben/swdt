@@ -16,8 +16,8 @@ import (
 )
 
 var (
-	network        = "default"
-	privateNetwork = "mk-minikube"
+	DefaultNetwork = "default"
+	PrivateNetwork = "mk-minikube"
 
 	windowsDomain = "windows"
 	hostName      = "win2k22"
@@ -44,8 +44,8 @@ func NewDriver(config *v1alpha1.Cluster) (*Driver, error) {
 			},
 			Memory:         6000,
 			CPU:            4,
-			Network:        network,
-			PrivateNetwork: privateNetwork,
+			Network:        DefaultNetwork,
+			PrivateNetwork: PrivateNetwork,
 			DiskPath:       config.Spec.Workload.Virtualization.DiskPath,
 			Hidden:         false,
 			NUMANodeCount:  0,
@@ -59,9 +59,9 @@ func NewDriver(config *v1alpha1.Cluster) (*Driver, error) {
 // CreateDomain starts a new libvirt domain from a predefined template.
 // copied from Minikube KVM drivers, since we need another template formatted.
 func (d *Driver) CreateDomain() (*libvirt.Domain, error) {
-	netd, err := d.Conn.LookupNetworkByName(network)
+	netd, err := d.Conn.LookupNetworkByName(DefaultNetwork)
 	if err != nil {
-		return nil, errors.Wrapf(err, "%s KVM network doesn't exist", network)
+		return nil, errors.Wrapf(err, "%s KVM network doesn't exist", DefaultNetwork)
 	}
 	if netd != nil {
 		_ = netd.Free()
@@ -96,32 +96,28 @@ func (d *Driver) CreateDomain() (*libvirt.Domain, error) {
 	return dom, nil
 }
 
-// GetPrivWindowsIPAddress returns the PRIVATE ip address for Windows domain
-func (d *Driver) GetPrivWindowsIPAddress() (string, error) {
-	var (
-		networks []libvirt.Network
-		err      error
-	)
+// GetLeasedIPs returns the network IP leases address for all domains
+func (d *Driver) GetLeasedIPs(filterNetwork string) (leases map[string]string, err error) {
+	var networks []libvirt.Network
 	networks, err = d.Conn.ListAllNetworks(libvirt.CONNECT_LIST_NETWORKS_ACTIVE)
 	if err != nil {
-		return "", err
+		return leases, err
 	}
+	leases = make(map[string]string, len(networks))
 	for _, network := range networks {
 		name, err := network.GetName()
 		if err != nil {
-			return "", err
+			return leases, err
 		}
-		if name == privateNetwork {
-			leases, err := network.GetDHCPLeases()
+		if name == filterNetwork {
+			dhcpLeases, err := network.GetDHCPLeases()
 			if err != nil {
-				return "", err
+				return leases, err
 			}
-			for _, lease := range leases {
-				if lease.Hostname == hostName {
-					return lease.IPaddr, nil
-				}
+			for _, lease := range dhcpLeases {
+				leases[lease.Hostname] = lease.IPaddr
 			}
 		}
 	}
-	return "", errors.New("No lease was found.")
+	return leases, nil
 }

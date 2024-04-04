@@ -103,7 +103,7 @@ func startMinikube(executor interface{}, version string) (err error) {
 		"--container-runtime", "containerd",
 		"--kubernetes-version", version,
 	}
-	if err = exec.Execute(executor, "minikube", args...); err != nil {
+	if _, err = exec.Execute(executor, "minikube", args...); err != nil {
 		return err
 	}
 	return nil
