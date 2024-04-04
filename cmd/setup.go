@@ -18,6 +18,7 @@ package cmd
 
 import (
 	"swdt/apis/config/v1alpha1"
+	"swdt/pkg/drivers"
 	"swdt/pkg/pwsh/executor"
 	"swdt/pkg/pwsh/setup"
 
@@ -42,6 +43,21 @@ func RunSetup(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
+	// Find the IP of the Windows machine grabbing from the domain
+	if config.Spec.Workload.Virtualization.SSH.Hostname == "" {
+		drv, err := drivers.NewDriver(config)
+		if err != nil {
+			return err
+		}
+
+		ipAddr, err := drv.GetPrivWindowsIPAddress()
+		if err != nil {
+			return err
+		}
+
+		config.Spec.Workload.Virtualization.SSH.Hostname = ipAddr
+	}
+
 	runner, err := executor.NewRunner(config, &setup.SetupRunner{})
 	if err != nil {
 		return err
@@ -53,11 +69,13 @@ func RunSetup(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	// Install Choco packages from the input list
-	if err = runner.Inner.InstallChocoPackages(*config.Spec.Workload.Auxiliary.ChocoPackages); err != nil {
-		return err
-	}
+	/*	// Install Choco packages from the input list
+		if err = runner.Inner.InstallChocoPackages(*config.Spec.Workload.Auxiliary.ChocoPackages); err != nil {
+			return err
+		}
 
-	// Enable RDP if the option is true
-	return runner.Inner.EnableRDP(*config.Spec.Workload.Auxiliary.EnableRDP)
+		// Enable RDP if the option is true
+		return runner.Inner.EnableRDP(*config.Spec.Workload.Auxiliary.EnableRDP)d
+	*/
+	return nil
 }

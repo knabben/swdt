@@ -56,9 +56,6 @@ type ProvisionerSpec struct {
 	// Name of the service to be deployed
 	Name string `json:"name,omitempty"`
 
-	// Version is the binary version to be deployed
-	Version string `json:"version,omitempty"`
-
 	// SourceURL set the HTTP server to be downloaded from
 	SourceURL string `json:"sourceURL,omitempty"`
 
@@ -67,10 +64,16 @@ type ProvisionerSpec struct {
 
 	// Overwrite delete the old file if exists first.
 	Overwrite bool `json:"overwrite,omitempty"`
+
+	// Version
+	Version string `json:"version,omitempty"`
 }
 
 // WorkloadSpec defines the workload specification
 type WorkloadSpec struct {
+	// KubernetesVersion is the binary version to be deployed
+	KubernetesVersion string `json:"kubernetesVersion,omitempty"`
+
 	// Virtualization defines libvirt configuration.
 	Virtualization VirtualizationSpec `json:"virtualization,omitempty"`
 
@@ -86,13 +89,13 @@ type ControlPlaneSpec struct {
 	// Minikube set the control plane installation via minikube
 	// otherwise the kubeconfig is being used
 	Minikube bool `json:"minikube,omitempty"`
+
+	// KubernetesVersion is the binary version to be deployed
+	KubernetesVersion string `json:"kubernetesVersion,omitempty"`
 }
 
 // ClusterSpec defines the desired state of the Cluster
 type ClusterSpec struct {
-	// Version is the Kubernetes version being installed in the cluster
-	Version string `json:"version,omitempty"`
-
 	ControlPlane ControlPlaneSpec `json:"controlPlane,omitempty"`
 	Workload     WorkloadSpec     `json:"workload,omitempty"`
 }

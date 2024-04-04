@@ -17,9 +17,6 @@ limitations under the License.
 package cmd
 
 import (
-	"swdt/pkg/drivers"
-	"swdt/pkg/exec"
-
 	"github.com/spf13/cobra"
 )
 
@@ -32,20 +29,25 @@ var destroyCmd = &cobra.Command{
 }
 
 func init() {
-	destroyCmd.Flags().StringVarP(&kvmQemuURI, "qemu-uri", "q", "qemu:///system", "The KVM QEMU connection URI. (kvm2 driver only)")
+	//destroyCmd.Flags().StringVarP(&kvmQemuURI, "qemu-uri", "q", "qemu:///system", "The KVM QEMU connection URI. (kvm2 driver only)")
 }
 
 func RunDestroy(cmd *cobra.Command, args []string) error {
-	var err error
-	if err = destroyWindowsDomain(); err != nil {
-		return err
-	}
-	if err = exec.Execute(exec.RunCommand, "minikube", "delete", "--purge"); err != nil {
-		return err
-	}
+	/*
+		var err error
+
+		if err = destroyWindowsDomain(); err != nil {
+			return err
+		}
+		if err = exec.Execute(exec.RunCommand, "minikube", "delete", "--purge"); err != nil {
+			return err
+		}
+
+	*/
 	return nil
 }
 
+/*
 func destroyWindowsDomain() error {
 	var err error
 	if err = drivers.NewDriver(diskPath, sshKey).Remove(); err != nil {
@@ -54,3 +56,4 @@ func destroyWindowsDomain() error {
 	return nil
 
 }
+*/

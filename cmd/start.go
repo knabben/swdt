@@ -17,15 +17,13 @@ limitations under the License.
 package cmd
 
 import (
-	"github.com/pkg/errors"
 	"log"
-	"path/filepath"
 	"strings"
+	"swdt/apis/config/v1alpha1"
 
 	"swdt/pkg/drivers"
 	"swdt/pkg/exec"
 
-	"github.com/docker/docker/pkg/homedir"
 	"github.com/spf13/cobra"
 	"libvirt.org/go/libvirt"
 )
@@ -38,58 +36,44 @@ var startCmd = &cobra.Command{
 	RunE:  RunStart,
 }
 
-var (
-	diskPath        string
-	sshKey          string
-	triggerMinikube bool
-	kvmQemuURI      string
-)
-
-func init() {
-	startCmd.Flags().StringVarP(&kvmQemuURI, "qemu-uri", "q", "qemu:///system", "The KVM QEMU connection URI. (kvm2 driver only)")
-	startCmd.Flags().StringVarP(&sshKey, "ssh-key", "s", filepath.Join(homedir.Get(), ".ssh/id_rsa"), "The KVM QEMU connection URI. (kvm2 driver only)")
-	startCmd.Flags().StringVarP(&diskPath, "disk-path", "d", "", "Windows qcow2 disk path.")
-	startCmd.Flags().BoolVarP(&triggerMinikube, "minikube", "m", false, "Trigger minikube installation")
-}
-
 func RunStart(cmd *cobra.Command, args []string) error {
-	var err error
-	if err = validateFlags(); err != nil {
+	var (
+		err    error
+		config *v1alpha1.Cluster
+	)
+
+	if config, err = loadConfiguration(cmd); err != nil {
 		return err
 	}
-	if triggerMinikube {
-		if err := startMinikube(exec.RunCommand); err != nil {
+
+	// Start the minikube if the flag is enabled.
+	if config.Spec.ControlPlane.Minikube {
+		version := config.Spec.ControlPlane.KubernetesVersion
+		if err := startMinikube(exec.RunCommand, version); err != nil {
 			return err
 		}
 	}
-	// Start the Windows VM on LibVirt
-	return startWindowsVM()
-}
 
-func validateFlags() error {
-	if diskPath == "" {
-		return errors.New("No disk path is passed. Use the disk-path argument to bring the Windows image.")
-	}
-	return nil
+	// Start the Windows VM on LibVirt
+	return startWindowsVM(config)
 }
 
 // startWindowsVM create the Windows libvirt domain and start it.
-func startWindowsVM() error {
+func startWindowsVM(config *v1alpha1.Cluster) error {
 	var (
-		conn *libvirt.Connect
-		dom  *libvirt.Domain
-		err  error
+		dom *libvirt.Domain
+		err error
 	)
 
-	// Start the Libvirt connection with kvm Qemu URI
-	if conn, err = libvirt.NewConnect(kvmQemuURI); err != nil {
+	drv, err := drivers.NewDriver(config)
+	if err != nil {
 		return err
 	}
+
 	log.Println("Creating domain...")
-	drv := drivers.NewDriver(diskPath, sshKey)
 
 	// Create the libvirt domain
-	if dom, err = drivers.CreateDomain(conn, drv); err != nil {
+	if dom, err = drv.CreateDomain(); err != nil {
 		// Domain already exists, skipping the Windows creation.
 		if alreadyExists(err) {
 			return nil
@@ -104,7 +88,22 @@ func startWindowsVM() error {
 	}()
 
 	// Start the Windows created domain.
-	if err = drv.Start(); err != nil {
+	if err = drv.KvmDriver.Start(); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// startMinikube initialize a minikube control plane.
+func startMinikube(executor interface{}, version string) (err error) {
+	// Start minikube with KVM2 machine
+	args := []string{
+		"start", "--driver", "kvm2",
+		"--container-runtime", "containerd",
+		"--kubernetes-version", version,
+	}
+	if err = exec.Execute(executor, "minikube", args...); err != nil {
 		return err
 	}
 	return nil
@@ -112,13 +111,4 @@ func startWindowsVM() error {
 
 func alreadyExists(err error) bool {
 	return strings.Contains(err.Error(), "already exists with")
-}
-
-// startMinikube initialize a minikube control plane.
-func startMinikube(executor interface{}) (err error) {
-	// Start minikube with KVM2 machine
-	if err = exec.Execute(executor, "minikube", "start", "--driver", "kvm2"); err != nil {
-		return err
-	}
-	return nil
 }

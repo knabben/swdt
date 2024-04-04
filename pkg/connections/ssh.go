@@ -86,7 +86,7 @@ func (c *SSHConnection) Connect() error {
 	}
 
 	klog.V(2).Infof("SSH connecting to '%s' as '%s'\n", c.creds.Hostname, c.creds.Username)
-	client, err := ssh.Dial(TCP_TYPE, c.creds.Hostname, &ssh.ClientConfig{
+	client, err := ssh.Dial(TCP_TYPE, fmt.Sprintf("%s:22", c.creds.Hostname), &ssh.ClientConfig{
 		User:            c.creds.Username,
 		Auth:            authMethod,
 		HostKeyCallback: ssh.InsecureIgnoreHostKey(),
@@ -123,6 +123,7 @@ func (c *SSHConnection) Run(args string) (string, error) {
 		return "", err
 	}
 
+	fmt.Println(session.Stderr)
 	return b.String(), nil
 }
 

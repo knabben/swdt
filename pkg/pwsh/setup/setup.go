@@ -70,7 +70,8 @@ func (r *SetupRunner) InstallChocoPackages(packages []string) error {
 // ChocoExists check if choco is already installed in the system.
 // todo(knabben) - fix the error granularity and find the correct stderr
 func (r *SetupRunner) ChocoExists() bool {
-	_, err := r.run(fmt.Sprintf("%s --version", CHOCO_PATH))
+	cmd, err := r.run(fmt.Sprintf("%s --version", CHOCO_PATH))
+	fmt.Println(cmd)
 	return err == nil
 }
 

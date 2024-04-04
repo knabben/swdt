@@ -3,17 +3,17 @@ kind: Cluster
 metadata:
   name: config-cluster
 spec:
-  version: v1.29.0
   controlPlane:
+    kubernetesVersion: v1.28.3
     minikube: true
   workload:
+    kubernetesVersion: v1.29.0
     virtualization:
       kvmQemuURI: "qemu:///system"
-      diskPath: "path"
+      diskPath: "/home/aknabben/go/src/github.com/knabben/swdt/packer/output/win2k22"
       ssh:
         username: "Administrator"
-        hostname: "192.168.122.220:22"  # autofilling if not passed
-        privateKey: "/home/<user>/.ssh/id_rsa"
+        privateKey: "/home/aknabben/.ssh/id_rsa"
     auxiliary:
       enableRDP: true
       chocoPackages:
