@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/fatih/color"
 	klog "k8s.io/klog/v2"
+	"strings"
 	"swdt/pkg/connections"
 )
 
@@ -85,6 +86,29 @@ func (r *SetupRunner) EnableRDP(enable bool) error {
 		Enable-NetFirewallRule -DisplayGroup 'Remote Desktop'`)
 	if err != nil {
 		return err
+	}
+	return nil
+}
+
+func (r *SetupRunner) InstallContainerd(containerd string) error {
+	var (
+		err    error
+		output string
+	)
+	// Install containerd if service is not running.
+	if output, err = r.run("get-service -name containerd"); err != nil {
+		cmd := fmt.Sprintf(".\\Install-Containerd.ps1 -ContainerDVersion %s", containerd)
+		if output, err = r.run(
+			`curl.exe -LO https://raw.githubusercontent.com/kubernetes-sigs/sig-windows-tools/master/hostprocess/Install-Containerd.ps1; ` + cmd,
+		); err != nil {
+			return err
+		}
+		klog.Info(resc.Sprintf("%s -- Containerd v%s installed with sucess.", output, containerd))
+		return nil
+	} else if strings.Contains(output, "Running") {
+		// Otherwise skip
+		klog.Info(resc.Sprintf("Skipping containerd installation, service already running."))
+		return nil
 	}
 	return nil
 }

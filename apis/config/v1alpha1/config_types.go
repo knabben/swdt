@@ -74,6 +74,9 @@ type WorkloadSpec struct {
 	// KubernetesVersion is the binary version to be deployed
 	KubernetesVersion string `json:"kubernetesVersion,omitempty"`
 
+	// ContainerdVersion is the binary version to be deployed
+	ContainerdVersion string `json:"containerdVersion,omitempty"`
+
 	// Virtualization defines libvirt configuration.
 	Virtualization VirtualizationSpec `json:"virtualization,omitempty"`
 

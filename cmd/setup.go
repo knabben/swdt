@@ -73,8 +73,12 @@ func RunSetup(cmd *cobra.Command, args []string) error {
 			return err
 		}
 	}
+	// Enable RDP if option is true
+	if err = runner.Inner.EnableRDP(*config.Spec.Workload.Auxiliary.EnableRDP); err != nil {
+		return err
+	}
 
-	return runner.Inner.EnableRDP(*config.Spec.Workload.Auxiliary.EnableRDP)
+	return runner.Inner.InstallContainerd(config.Spec.Workload.ContainerdVersion)
 }
 
 func findWindowsIP(config *v1alpha1.Cluster) (string, error) {
