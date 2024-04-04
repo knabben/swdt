@@ -68,10 +68,8 @@ func (r *SetupRunner) InstallChocoPackages(packages []string) error {
 }
 
 // ChocoExists check if choco is already installed in the system.
-// todo(knabben) - fix the error granularity and find the correct stderr
 func (r *SetupRunner) ChocoExists() bool {
-	cmd, err := r.run(fmt.Sprintf("%s --version", CHOCO_PATH))
-	fmt.Println(cmd)
+	_, err := r.run(fmt.Sprintf("%s --version", CHOCO_PATH))
 	return err == nil
 }
 
@@ -83,11 +81,10 @@ func (r *SetupRunner) EnableRDP(enable bool) error {
 	}
 
 	klog.Info(resc.Sprintf("Enabling RDP."))
-	output, err := r.run(`Set-ItemProperty -Path "HKLM:\System\CurrentControlSet\Control\Terminal Server" -name "fDenyTSConnections" -value 0;
-		Enable-NetFirewallRule -DisplayGroup "Remote Desktop"`)
+	_, err := r.run(`Set-ItemProperty -Path 'HKLM:\System\CurrentControlSet\Control\Terminal Server' -name 'fDenyTSConnections' -value 0; 
+		Enable-NetFirewallRule -DisplayGroup 'Remote Desktop'`)
 	if err != nil {
 		return err
 	}
-	klog.Info(resc.Sprintf(output))
 	return nil
 }

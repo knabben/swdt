@@ -17,6 +17,7 @@ limitations under the License.
 package cmd
 
 import (
+	"log"
 	"swdt/apis/config/v1alpha1"
 	"swdt/pkg/drivers"
 	"swdt/pkg/pwsh/executor"
@@ -45,16 +46,10 @@ func RunSetup(cmd *cobra.Command, args []string) error {
 
 	// Find the IP of the Windows machine grabbing from the domain
 	if config.Spec.Workload.Virtualization.SSH.Hostname == "" {
-		drv, err := drivers.NewDriver(config)
-		if err != nil {
+		var ipAddr string
+		if ipAddr, err = findWindowsIP(config); err != nil {
 			return err
 		}
-
-		ipAddr, err := drv.GetPrivWindowsIPAddress()
-		if err != nil {
-			return err
-		}
-
 		config.Spec.Workload.Virtualization.SSH.Hostname = ipAddr
 	}
 
@@ -62,20 +57,34 @@ func RunSetup(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
-	defer runner.CloseConnection() // nolint
+	defer func(runner *executor.Runner[*setup.SetupRunner]) {
+		if err := runner.CloseConnection(); err != nil {
+			log.Printf("error to close the connection: %v\n", err)
+		}
+	}(runner)
 
-	// Install choco binary
-	if err = runner.Inner.InstallChoco(); err != nil {
-		return err
-	}
-
-	/*	// Install Choco packages from the input list
+	// Install choco binary and packages if a list of packages exists
+	if len(*config.Spec.Workload.Auxiliary.ChocoPackages) > 0 {
+		if err = runner.Inner.InstallChoco(); err != nil {
+			return err
+		}
+		// Install Choco packages from the input list
 		if err = runner.Inner.InstallChocoPackages(*config.Spec.Workload.Auxiliary.ChocoPackages); err != nil {
 			return err
 		}
+	}
 
-		// Enable RDP if the option is true
-		return runner.Inner.EnableRDP(*config.Spec.Workload.Auxiliary.EnableRDP)d
-	*/
-	return nil
+	return runner.Inner.EnableRDP(*config.Spec.Workload.Auxiliary.EnableRDP)
+}
+
+func findWindowsIP(config *v1alpha1.Cluster) (string, error) {
+	drv, err := drivers.NewDriver(config)
+	if err != nil {
+		return "", err
+	}
+	var ipAddr string
+	if ipAddr, err = drv.GetPrivWindowsIPAddress(); err != nil {
+		return "", err
+	}
+	return ipAddr, err
 }

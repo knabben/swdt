@@ -36,9 +36,10 @@ import (
 )
 
 const (
-	TCP_TYPE                 = "tcp"
-	SCP_BINARY               = "C:\\Windows\\System32\\OpenSSH\\scp.exe"
-	timeout    time.Duration = 30 * time.Second
+	TCP_TYPE   = "tcp"
+	SCP_BINARY = "C:\\Windows\\System32\\OpenSSH\\scp.exe"
+
+	timeout time.Duration = 30 * time.Second
 )
 
 type SSHConnection struct {
@@ -117,13 +118,11 @@ func (c *SSHConnection) Run(args string) (string, error) {
 
 	// Multiline PowerShell commands over SSH trip over newlines - only first one is executed
 	args = regexp.MustCompile(`\r?\n`).ReplaceAllLiteralString(args, ";")
-	cmd := fmt.Sprintf("powershell -nologo -noprofile -c { %s }", args)
+	cmd := fmt.Sprintf("powershell -NoLogo -Command %v", args)
 	klog.V(2).Infof("SSH executing PowerShell command: %s\n", cmd)
 	if err := session.Run(cmd); err != nil {
 		return "", err
 	}
-
-	fmt.Println(session.Stderr)
 	return b.String(), nil
 }
 
