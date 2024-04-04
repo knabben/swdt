@@ -18,6 +18,9 @@ package cmd
 
 import (
 	"github.com/spf13/cobra"
+	"swdt/apis/config/v1alpha1"
+	"swdt/pkg/drivers"
+	"swdt/pkg/exec"
 )
 
 // destroyCmd represents the destroy command
@@ -28,32 +31,31 @@ var destroyCmd = &cobra.Command{
 	RunE:  RunDestroy,
 }
 
-func init() {
-	//destroyCmd.Flags().StringVarP(&kvmQemuURI, "qemu-uri", "q", "qemu:///system", "The KVM QEMU connection URI. (kvm2 driver only)")
-}
-
 func RunDestroy(cmd *cobra.Command, args []string) error {
-	/*
-		var err error
+	var (
+		err    error
+		config *v1alpha1.Cluster
+	)
 
-		if err = destroyWindowsDomain(); err != nil {
-			return err
-		}
-		if err = exec.Execute(exec.RunCommand, "minikube", "delete", "--purge"); err != nil {
-			return err
-		}
+	if config, err = loadConfiguration(cmd); err != nil {
+		return err
+	}
 
-	*/
-	return nil
-}
-
-/*
-func destroyWindowsDomain() error {
-	var err error
-	if err = drivers.NewDriver(diskPath, sshKey).Remove(); err != nil {
+	// Destroy the Windows domain
+	if err = destroyWindowsDomain(config); err != nil {
+		return err
+	}
+	// Delete minikube
+	if _, err = exec.Execute(exec.RunCommand, "minikube", "delete", "--purge"); err != nil {
 		return err
 	}
 	return nil
-
 }
-*/
+
+func destroyWindowsDomain(config *v1alpha1.Cluster) error {
+	drv, err := drivers.NewDriver(config)
+	if err != nil {
+		return err
+	}
+	return drv.KvmDriver.Remove()
+}
