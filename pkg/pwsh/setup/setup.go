@@ -12,6 +12,7 @@ import (
 var (
 	mainc = color.New(color.FgHiBlack).Add(color.Underline)
 	resc  = color.New(color.FgHiGreen).Add(color.Bold)
+	bad   = color.New(color.FgHiRed)
 )
 
 const (
@@ -40,7 +41,6 @@ func (r *SetupRunner) InstallChoco() error {
 		klog.Info(resc.Sprintf("Choco already exists, skipping installation..."))
 		return nil
 	}
-
 	// Proceed to install choco package manager.
 	output, err := r.run(`Set-ExecutionPolicy Bypass -Scope Process -Force;
 		[System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor 3072; 
@@ -54,7 +54,6 @@ func (r *SetupRunner) InstallChocoPackages(packages []string) error {
 	if !r.ChocoExists() {
 		return fmt.Errorf("choco not installed. Skipping package installation")
 	}
-
 	klog.Info(mainc.Sprint("Installing Choco packages."))
 	for _, pkg := range packages {
 		output, err := r.run(fmt.Sprintf("%s %s %s", CHOCO_PATH, CHOCO_INSTALL, pkg))
@@ -130,20 +129,19 @@ func (r *SetupRunner) JoinNode(cpVersion, cpIPAddr string) error {
 	// In case kubelet is already running, skip joining procedure.
 	if output, err = r.run("get-service -name kubelet"); err == nil && !strings.Contains(output, "Running") {
 		// Control plane token create and extract, saving the final command
-		args := []string{
-			"ssh", "--", "sudo", fmt.Sprintf("/var/lib/minikube/binaries/%s/kubeadm", cpVersion),
+		lcmd := []string{
+			"minikube", "ssh", "--", "sudo",
+			fmt.Sprintf("/var/lib/minikube/binaries/%s/kubeadm", cpVersion),
 			"token", "create", "--print-join-command",
 		}
-		if lout, err = exec.Execute(exec.RunCommand, "minikube", args...); err != nil {
+		if lout, err = exec.Execute(exec.RunCommand, lcmd...); err != nil {
 			return err
 		}
-
 		// Force the creation of the minikube folder for certificates
 		cmd := "mkdir c:\\var\\lib\\minikube\\certs -Force"
 		if _, err = r.run(cmd); err != nil {
 			return err
 		}
-
 		// Copy the control plane host value to Windows hosts
 		cmd = fmt.Sprintf(`Add-content -Path C:\\Windows\\System32\\drivers\\etc\\hosts -Value \"%s %s\"`, cpIPAddr, cpHost)
 		if output, err = r.run(cmd); err != nil {
@@ -159,7 +157,6 @@ func (r *SetupRunner) JoinNode(cpVersion, cpIPAddr string) error {
 				}
 			}
 		}()
-
 		// Add the control plane into hosts and start the join command.
 		cmd = fmt.Sprintf(`$env:Path += ';c:\\k\\'; %s`, strings.Trim(lout, " \n"))
 		if output, err = r.run(cmd); err != nil {
@@ -172,5 +169,33 @@ func (r *SetupRunner) JoinNode(cpVersion, cpIPAddr string) error {
 		klog.Info(resc.Sprintf("Skipping node join, the Kubelet service is already running."))
 	}
 
+	return nil
+}
+
+// InstallCNI
+func (r *SetupRunner) InstallCNI(calicoVersion string) error {
+	// Execute Kubernetes steps for Calico installation
+	steps := [][]string{
+		{"kubectl", "patch", "ipamconfigurations", "default", "--type", "merge", "--patch='{\"spec\": {\"strictAffinity\": true}}'"},
+
+		/*{"kubectl", "config", "set-context", "minikube"},
+		{"kubectl", "create", "-f", fmt.Sprintf("https://raw.githubusercontent.com/projectcalico/calico/%v/manifests/tigera-operator.yaml", calicoVersion)},
+
+		// Render the configmap with content
+		{"kubectl", "create", "-f", "./specs/configmap.yaml"},
+		{"kubectl", "create", "-f", "./specs/installation.yaml"},
+		{"kubectl", "create", "-f", "./specs/apiserver.yaml"},
+		*/
+	}
+
+	//{curl -L  https://raw.githubusercontent.com/kubernetes-sigs/sig-windows-tools/master/hostprocess/calico/kube-proxy/kube-proxy.yml | sed "s/KUBE_PROXY_VERSION/v1.27.3/g" | kubectl apply -f -
+	for i := 0; i <= len(steps)-1; i++ {
+		resc.Printf("Running: %v\n", strings.Join(steps[i], " "))
+		if stdout, err := exec.Execute(exec.RunCommand, steps[i]...); err != nil {
+			bad.Println(err.Error())
+		} else {
+			fmt.Println(stdout)
+		}
+	}
 	return nil
 }

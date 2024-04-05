@@ -21,6 +21,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/fatih/color"
 	"io"
 	"os"
 	"path"
@@ -41,6 +42,10 @@ const (
 	SCP_BINARY = "C:\\Windows\\System32\\OpenSSH\\scp.exe"
 
 	timeout time.Duration = 30 * time.Second
+)
+
+var (
+	resc = color.New(color.FgHiGreen).Add(color.Bold)
 )
 
 type SSHConnection struct {
@@ -109,22 +114,29 @@ func (c *SSHConnection) Run(args string) (string, error) {
 	var (
 		err     error
 		session *ssh.Session
-		b       bytes.Buffer
+		stdout  bytes.Buffer
+		stderr  bytes.Buffer
 	)
 	if session, err = c.client.NewSession(); err != nil {
 		return "", err
 	}
 	defer session.Close()
-	session.Stdout = &b
+
+	session.Stdout = &stdout
+	session.Stderr = &stderr
 
 	// Multiline PowerShell commands over SSH trip over newlines - only first one is executed
 	args = regexp.MustCompile(`\r?\n`).ReplaceAllLiteralString(args, ";")
 	cmd := fmt.Sprintf(`powershell -NoLogo -Command "%v"`, strings.Trim(args, "\n"))
-	klog.V(2).Infof("SSH executing PowerShell command: %s\n", cmd)
+	resc.Printf("SSH: %s\n", cmd)
 	if err := session.Run(cmd); err != nil {
 		return "", err
 	}
-	return b.String(), nil
+
+	if stderr.Len() > 0 {
+		err = errors.New(stderr.String())
+	}
+	return stdout.String(), err
 }
 
 // Copy a file from local to remote setting the permissions

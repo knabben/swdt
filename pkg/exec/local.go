@@ -2,18 +2,22 @@ package exec
 
 import (
 	"bufio"
-	"fmt"
+	"github.com/pkg/errors"
 	"io"
 	"os/exec"
 	"sync"
 )
 
-func Execute(runner interface{}, cmd string, args ...string) (string, error) {
-	return runner.(func(cmd string, args ...string) (string, error))(cmd, args...)
+func Execute(runner interface{}, cmd ...string) (string, error) {
+	return runner.(func(cmd ...string) (string, error))(cmd...)
 }
 
-func RunCommand(cmd string, args ...string) (string, error) {
-	command := exec.Command(cmd, args...)
+func RunCommand(cmd ...string) (string, error) {
+	var (
+		stdoutp string
+		stderrp string
+	)
+	command := exec.Command(cmd[0], cmd[1:]...)
 
 	stdout, err := command.StdoutPipe()
 	if err != nil {
@@ -28,29 +32,20 @@ func RunCommand(cmd string, args ...string) (string, error) {
 	if err := command.Start(); err != nil {
 		return "", err
 	}
-
-	var output string
-	output, err = redirectOutput(nil, stdout)
+	stdoutp, err = redirectOutput(nil, stdout)
 	if err != nil {
 		return "", err
 	}
-
 	var wg sync.WaitGroup
 	wg.Add(1)
-	go func(closer io.ReadCloser, wg *sync.WaitGroup) error {
-		output, err := redirectOutput(wg, stdout)
-		if err != nil {
-			return err
+	go func(closer *io.ReadCloser, wg *sync.WaitGroup) {
+		if stderrp, err = redirectOutput(wg, *closer); err == nil && len(stderrp) > 0 {
+			err = errors.New(stderrp)
 		}
-		if len(output) > 0 {
-			fmt.Println("stderr: ", output)
-		}
-		return nil
-	}(stderr, &wg)
+	}(&stderr, &wg)
 	wg.Wait()
 	command.Wait()
-
-	return output, err
+	return stdoutp, err
 }
 
 func redirectOutput(wg *sync.WaitGroup, std io.ReadCloser) (string, error) {

@@ -99,8 +99,9 @@ type ControlPlaneSpec struct {
 
 // ClusterSpec defines the desired state of the Cluster
 type ClusterSpec struct {
-	ControlPlane ControlPlaneSpec `json:"controlPlane,omitempty"`
-	Workload     WorkloadSpec     `json:"workload,omitempty"`
+	ControlPlane  ControlPlaneSpec `json:"controlPlane,omitempty"`
+	Workload      WorkloadSpec     `json:"workload,omitempty"`
+	CalicoVersion string           `json:"calicoVersion,omitempty"`
 }
 
 // ClusterStatus -- tbd

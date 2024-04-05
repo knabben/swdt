@@ -43,7 +43,7 @@ func TestLoadConfigNode(t *testing.T) {
 	config, err := LoadConfigNodeFromFile(SAMPLE_FILE)
 	assert.Nil(t, err)
 
-	assert.False(t, *config.Spec.Workload.Auxiliary.EnableRDP)
+	assert.True(t, *config.Spec.Workload.Auxiliary.EnableRDP)
 	assert.Equal(t, len(*config.Spec.Workload.Auxiliary.ChocoPackages), 0)
 
 	provisioners := config.Spec.Workload.Provisioners

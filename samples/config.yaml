@@ -3,9 +3,10 @@ kind: Cluster
 metadata:
   name: config-cluster
 spec:
+  calicoVersion: v3.27.3
   controlPlane:
     kubernetesVersion: v1.28.3
-    minikube: true
+    minikube: false
   workload:
     containerdVersion: 1.7.14
     kubernetesVersion: v1.29.0
@@ -16,7 +17,7 @@ spec:
         username: "Administrator"
         privateKey: "/home/aknabben/.ssh/id_rsa"
     auxiliary:
-      enableRDP: false
+      enableRDP: true
       chocoPackages:
     provisioners:
     - name: containerd

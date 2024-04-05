@@ -14,7 +14,7 @@ func TestAlreadyExists(t *testing.T) {
 
 func TestStartMinikube(t *testing.T) {
 	var called = 0
-	fn := func(cmd string, args ...string) (string, error) {
+	fn := func(cmd ...string) (string, error) {
 		called += 1
 		return "", nil
 	}

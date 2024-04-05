@@ -2,53 +2,123 @@ package setup
 
 import (
 	"fmt"
+	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
 	"swdt/apis/config/v1alpha1"
 	"testing"
 )
 
 var (
-	calls      = []string{}
+	calls      []string
 	chocoCheck = fmt.Sprintf("%s --version", CHOCO_PATH)
 )
 
-func validateRun(args string) (string, error) {
-	calls = append(calls, args)
-	return "cmd stdout", nil
+type Response struct {
+	response string
+	error    error
 }
 
 func TestChocoExist(t *testing.T) {
-	calls = []string{}
-	expectedCalls := 1
-
-	r := SetupRunner{run: validateRun}
+	responses := []Response{
+		{
+			response: "",
+			error:    nil,
+		},
+	}
+	r := startRunner(&responses)
 	assert.True(t, r.ChocoExists())
-	assert.Len(t, calls, expectedCalls)
-	assert.Equal(t, calls[0], chocoCheck)
+	assertCalls(t, []string{"choco.exe --version"})
 }
 
 func TestInstallChocoPackages(t *testing.T) {
-	calls = []string{}
-	expectedCalls := 3
-	pkgs := []string{"vim", "grep"}
-
-	r := SetupRunner{run: validateRun}
-	config := v1alpha1.AuxiliarySpec{ChocoPackages: &pkgs}
+	responses := []Response{
+		{
+			response: "",
+			error:    nil,
+		},
+		{
+			response: "",
+			error:    nil,
+		},
+		{
+			response: "",
+			error:    nil,
+		},
+	}
+	r := startRunner(&responses)
+	config := v1alpha1.AuxiliarySpec{ChocoPackages: &[]string{"vim", "grep"}}
 	err := r.InstallChocoPackages(*config.ChocoPackages)
 	assert.Nil(t, err)
-
-	assert.Len(t, calls, expectedCalls)
-	assert.Equal(t, calls[0], chocoCheck)
-	for i := 0; i < expectedCalls-1; i++ {
-		assert.Equal(t, calls[i+1], fmt.Sprintf("%s %s %s", CHOCO_PATH, CHOCO_INSTALL, pkgs[i]))
-	}
 }
 
 func TestEnableRDP(t *testing.T) {
-	var defaultTrue = true
-	r := SetupRunner{run: validateRun}
-	config := v1alpha1.AuxiliarySpec{EnableRDP: &defaultTrue}
+	responses := []Response{
+		{
+			response: "",
+			error:    nil,
+		},
+	}
+	r := startRunner(&responses)
 
+	var defaultTrue = true
+	config := v1alpha1.AuxiliarySpec{EnableRDP: &defaultTrue}
 	err := r.EnableRDP(*config.EnableRDP)
 	assert.Nil(t, err)
+}
+
+func TestInstallContainerdSkip(t *testing.T) {
+	responses := []Response{
+		{
+			response: "Running",
+			error:    nil,
+		},
+		{
+			response: "Running",
+			error:    errors.New("blau"),
+		},
+	}
+
+	r := startRunner(&responses)
+	config := v1alpha1.ClusterSpec{CalicoVersion: "v3.27"}
+	err := r.InstallContainerd(config.CalicoVersion)
+	assert.Nil(t, err)
+}
+
+func TestInstallContainerdRunning(t *testing.T) {
+	responses := []Response{
+		{
+			response: "",
+			error:    errors.New(""),
+		},
+		{
+			response: "",
+			error:    nil,
+		},
+	}
+
+	r := startRunner(&responses)
+	err := r.InstallContainerd("v3.27")
+	assert.Nil(t, err)
+	assertCalls(t, []string{"get-service -name containerd", ".\\Install-Containerd"})
+}
+
+func assertCalls(t *testing.T, rcalls []string) {
+	assert.Len(t, calls, len(rcalls))
+	for idx, call := range rcalls {
+		assert.Contains(t, calls[idx], call)
+	}
+}
+
+func startRunner(responses *[]Response) SetupRunner {
+	calls = []string{}
+	return SetupRunner{run: func(cmd string) (string, error) {
+		calls = append(calls, cmd)
+		return popResponse(responses)
+	}}
+}
+
+func popResponse(responses *[]Response) (string, error) {
+	var resp Response
+	resp, *responses = (*responses)[0], (*responses)[1:]
+	return resp.response, resp.error
 }

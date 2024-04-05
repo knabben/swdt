@@ -107,12 +107,12 @@ func startWindowsVM(config *v1alpha1.Cluster) error {
 // startMinikube initialize a minikube control plane.
 func startMinikube(executor interface{}, version string) (err error) {
 	// Start minikube with KVM2 machine
-	args := []string{
-		"start", "--driver", "kvm2",
+	cmd := []string{
+		"minikube", "start", "--driver", "kvm2",
 		"--container-runtime", "containerd",
 		"--kubernetes-version", version,
 	}
-	if _, err = exec.Execute(executor, "minikube", args...); err != nil {
+	if _, err = exec.Execute(executor, cmd...); err != nil {
 		return err
 	}
 	return nil
