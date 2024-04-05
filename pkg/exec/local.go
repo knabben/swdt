@@ -2,6 +2,7 @@ package exec
 
 import (
 	"bufio"
+	"fmt"
 	"io"
 	"os/exec"
 	"sync"
@@ -18,7 +19,7 @@ func RunCommand(cmd string, args ...string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	_, err = command.StderrPipe()
+	stderr, err := command.StderrPipe()
 	if err != nil {
 		return "", err
 	}
@@ -34,18 +35,31 @@ func RunCommand(cmd string, args ...string) (string, error) {
 		return "", err
 	}
 
+	var wg sync.WaitGroup
+	wg.Add(1)
+	go func(closer io.ReadCloser, wg *sync.WaitGroup) error {
+		output, err := redirectOutput(wg, stdout)
+		if err != nil {
+			return err
+		}
+		if len(output) > 0 {
+			fmt.Println("stderr: ", output)
+		}
+		return nil
+	}(stderr, &wg)
+	wg.Wait()
 	command.Wait()
 
 	return output, err
 }
 
-func redirectOutput(wg *sync.WaitGroup, stdout io.ReadCloser) (string, error) {
+func redirectOutput(wg *sync.WaitGroup, std io.ReadCloser) (string, error) {
 	if wg != nil {
 		defer wg.Done()
 	}
 	// Increase max buffer size to 1MB to handle long lines of Ginkgo output and avoid bufio.ErrTooLong errors
 	const maxBufferSize = 1024 * 1024
-	scanner := bufio.NewScanner(stdout)
+	scanner := bufio.NewScanner(std)
 	buf := make([]byte, 0, maxBufferSize)
 	scanner.Buffer(buf, maxBufferSize)
 	scanner.Split(bufio.ScanLines)

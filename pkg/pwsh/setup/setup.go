@@ -88,14 +88,16 @@ func (r *SetupRunner) EnableRDP(enable bool) error {
 
 // InstallContainerd install the containerd bits with the set version, enabled required services.
 func (r *SetupRunner) InstallContainerd(containerd string) error {
+	klog.Info(resc.Sprintf("Installing containerd."))
 	if output, err := r.run("get-service -name containerd"); err != nil {
 		// Install containerd if service is not running.
-		cmd := fmt.Sprintf(".\\Install-Containerd.ps1 -ContainerDVersion %s", containerd)
+		cmd := fmt.Sprintf(".\\Install-Containerd.ps1 -ContainerDVersion %s; shutdown /r /t 0", containerd)
 		output, err := r.run(`curl.exe -LO https://raw.githubusercontent.com/kubernetes-sigs/sig-windows-tools/master/hostprocess/Install-Containerd.ps1; ` + cmd)
 		if err != nil {
-			return err
+			klog.Info(resc.Sprintf("retrying to run the script..."))
+			return r.InstallContainerd(containerd)
 		}
-		klog.Info(resc.Sprintf("%s -- Containerd v%s installed with sucess.", output, containerd))
+		klog.Info(resc.Sprintf("%s -- Containerd v%s installed with success.", output, containerd))
 	} else if strings.Contains(output, "Running") { // Otherwise skip
 		klog.Info(resc.Sprintf("Skipping containerd installation, service already running, use the copy command."))
 	}
@@ -104,6 +106,7 @@ func (r *SetupRunner) InstallContainerd(containerd string) error {
 
 // InstallKubernetes install all Kubernetes bits with the set version.
 func (r *SetupRunner) InstallKubernetes(kubernetes string) error {
+	klog.Info(resc.Sprintf("Installing kubelet."))
 	if output, err := r.run("get-service -name kubelet"); err != nil {
 		// Install Kubernetes if service is not running.
 		cmd := fmt.Sprintf(".\\PrepareNode.ps1 -KubernetesVersion %s", kubernetes)
@@ -123,6 +126,7 @@ func (r *SetupRunner) JoinNode(cpVersion, cpIPAddr string) error {
 	var (
 		err    error
 		output string
+		lout   string
 	)
 
 	// In case kubelet is already running, skip joining procedure.
@@ -132,7 +136,7 @@ func (r *SetupRunner) JoinNode(cpVersion, cpIPAddr string) error {
 			"ssh", "--", "sudo", fmt.Sprintf("/var/lib/minikube/binaries/%s/kubeadm", cpVersion),
 			"token", "create", "--print-join-command",
 		}
-		if output, err = exec.Execute(exec.RunCommand, "minikube", args...); err != nil {
+		if lout, err = exec.Execute(exec.RunCommand, "minikube", args...); err != nil {
 			return err
 		}
 
@@ -142,6 +146,11 @@ func (r *SetupRunner) JoinNode(cpVersion, cpIPAddr string) error {
 			return err
 		}
 
+		// Copy the control plane host value to Windows hosts
+		cmd = fmt.Sprintf(`Add-content -Path C:\\Windows\\System32\\drivers\\etc\\hosts -Value \"%s %s\"`, cpIPAddr, cpHost)
+		if output, err = r.run(cmd); err != nil {
+			return err
+		}
 		// Trigger a goroutine to copy the ca.crt from kubernetes/pki to the CA folder.
 		var ctx = context.Background()
 		go func(ctx context.Context) {
@@ -151,13 +160,14 @@ func (r *SetupRunner) JoinNode(cpVersion, cpIPAddr string) error {
 				if _, err = r.run(cmd); err == nil {
 					ctx.Done()
 				}
+				klog.Info(resc.Sprintf("trying to copy cert..."))
 			case <-ctx.Done():
 				return
 			}
 		}(ctx)
 
 		// Add the control plane into hosts and start the join command.
-		cmd = fmt.Sprintf(`Add-content -Path C:\\Windows\\System32\\drivers\\etc\\hosts -Value \"%s %s\"; `+output, cpIPAddr, cpHost)
+		cmd = fmt.Sprintf(`$env:Path += ';c:\\k\\'; %s`, strings.Trim(lout, " \n"))
 		if output, err = r.run(cmd); err != nil {
 			return err
 		}

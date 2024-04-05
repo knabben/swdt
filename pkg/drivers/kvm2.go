@@ -68,9 +68,9 @@ func (d *Driver) CreateDomain() (*libvirt.Domain, error) {
 	}
 
 	// create the XML for the domain using our domainTmpl template
-	tmpl := template.Must(template.New("domain").Parse(domainTmpl))
 	var domainXML bytes.Buffer
-	if err := tmpl.Execute(&domainXML, d); err != nil {
+	tmpl := template.Must(template.New("domain").Parse(domainTmpl))
+	if err := tmpl.Execute(&domainXML, d.KvmDriver); err != nil {
 		return nil, errors.Wrap(err, "executing domain xml")
 	}
 

@@ -25,6 +25,7 @@ import (
 	"os"
 	"path"
 	"regexp"
+	"strings"
 	"swdt/apis/config/v1alpha1"
 	"sync"
 	"time"
@@ -118,7 +119,7 @@ func (c *SSHConnection) Run(args string) (string, error) {
 
 	// Multiline PowerShell commands over SSH trip over newlines - only first one is executed
 	args = regexp.MustCompile(`\r?\n`).ReplaceAllLiteralString(args, ";")
-	cmd := fmt.Sprintf(`powershell -NoLogo -Command "%v"`, args)
+	cmd := fmt.Sprintf(`powershell -NoLogo -Command "%v"`, strings.Trim(args, "\n"))
 	klog.V(2).Infof("SSH executing PowerShell command: %s\n", cmd)
 	if err := session.Run(cmd); err != nil {
 		return "", err

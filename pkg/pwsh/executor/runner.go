@@ -1,6 +1,7 @@
 package executor
 
 import (
+	"fmt"
 	"swdt/apis/config/v1alpha1"
 	"swdt/pkg/connections"
 	"swdt/pkg/pwsh/kubernetes"
@@ -31,7 +32,9 @@ func (r *Runner[R]) CloseConnection() error {
 // NewRunner returns a new encapsulated Runner to be reused on specialized commands.
 func NewRunner[R RunnerInterface](config *v1alpha1.Cluster, run R) (*Runner[R], error) {
 	conn := connections.NewConnection(config.Spec.Workload.Virtualization.SSH)
+	fmt.Println(config.Spec.Workload.Virtualization.SSH)
 	if err := conn.Connect(); err != nil {
+		fmt.Println("error")
 		return nil, err
 	}
 	runner := Runner[R]{Inner: run}

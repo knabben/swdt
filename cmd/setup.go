@@ -17,6 +17,7 @@ limitations under the License.
 package cmd
 
 import (
+	"k8s.io/klog/v2"
 	"log"
 
 	"github.com/spf13/cobra"
@@ -27,7 +28,7 @@ import (
 )
 
 var (
-	windowsHost      = "win2k22"
+	windowsHost      = "windows"
 	controlPlaneHost = "minikube"
 )
 
@@ -59,6 +60,7 @@ func RunSetup(cmd *cobra.Command, args []string) error {
 	}
 	// Find the control plane IP
 	controlPlaneIP := leases[controlPlaneHost]
+	klog.Info(resc.Sprintf("Found DHCP leases: %v", leases))
 
 	// Starting the SSH executor
 	runner, err := executor.NewRunner(config, &setup.SetupRunner{})

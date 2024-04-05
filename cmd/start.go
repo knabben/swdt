@@ -17,6 +17,8 @@ limitations under the License.
 package cmd
 
 import (
+	"github.com/fatih/color"
+	"k8s.io/klog/v2"
 	"log"
 	"strings"
 	"swdt/apis/config/v1alpha1"
@@ -26,6 +28,10 @@ import (
 
 	"github.com/spf13/cobra"
 	"libvirt.org/go/libvirt"
+)
+
+var (
+	resc = color.New(color.FgHiGreen).Add(color.Bold)
 )
 
 // startCmd represents the start command
@@ -42,6 +48,7 @@ func RunStart(cmd *cobra.Command, args []string) error {
 		config *v1alpha1.Cluster
 	)
 
+	// Loading configuration
 	if config, err = loadConfiguration(cmd); err != nil {
 		return err
 	}
@@ -49,12 +56,14 @@ func RunStart(cmd *cobra.Command, args []string) error {
 	// Start the minikube if the flag is enabled.
 	if config.Spec.ControlPlane.Minikube {
 		version := config.Spec.ControlPlane.KubernetesVersion
+		klog.Info(resc.Sprintf("Starting a Minikube control plane, this operation can take a while..."))
 		if err := startMinikube(exec.RunCommand, version); err != nil {
 			return err
 		}
 	}
 
 	// Start the Windows VM on LibVirt
+	klog.Info(resc.Sprintf("Starting the Windows VM on domain, this operation can take a while..."))
 	return startWindowsVM(config)
 }
 
