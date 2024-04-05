@@ -36,7 +36,7 @@ source "qemu" "windows" {
 
   floppy_files = [
     "kvm/floppy/autounattend.xml",
-    "kvm/floppy/openssh.ps1",
+    "kvm/floppy/bootstrap.ps1",
     "kvm/floppy/ssh_key.pub"
   ]
   qemuargs = [["-cdrom", var.virtio_iso]]
@@ -49,7 +49,7 @@ source "qemu" "windows" {
   ssh_timeout  = "1h"
 
   boot_wait        = "10s"
-  shutdown_command = "shutdown /s /t 5 /f"
+  shutdown_command = "shutdown /s /t 50 /f"
   shutdown_timeout = "15m"
 }
 

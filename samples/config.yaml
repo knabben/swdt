@@ -11,7 +11,7 @@ spec:
     kubernetesVersion: v1.29.0
     virtualization:
       kvmQemuURI: "qemu:///system"
-      diskPath: "/home/aknabben/go/src/github.com/knabben/swdt/packer/output/win2k22"
+      diskPath: "/home/aknabben/go/src/github.com/knabben/swdt/packer/output/windows"
       ssh:
         username: "Administrator"
         privateKey: "/home/aknabben/.ssh/id_rsa"

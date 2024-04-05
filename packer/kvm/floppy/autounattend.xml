@@ -198,7 +198,7 @@
                     <Order>10</Order>
                 </SynchronousCommand>
                 <SynchronousCommand wcm:action="add">
-                    <CommandLine>cmd.exe /c powershell -File "a:\openssh.ps1"</CommandLine>
+                    <CommandLine>cmd.exe /c powershell -File "a:\bootstrap.ps1"</CommandLine>
                     <Description>Enable SSH</Description>
                     <Order>11</Order>
                 </SynchronousCommand>
