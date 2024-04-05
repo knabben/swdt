@@ -2,7 +2,6 @@ package setup
 
 import (
 	"bufio"
-	"context"
 	"fmt"
 	"github.com/fatih/color"
 	klog "k8s.io/klog/v2"
@@ -184,19 +183,15 @@ func (r *SetupRunner) JoinNode(cpVersion, cpIPAddr string) error {
 			return err
 		}
 		// Trigger a goroutine to copy the ca.crt from kubernetes/pki to the CA folder.
-		ctx := context.Background()
-		ctx, cancel := context.WithTimeout(ctx, 30*time.Second)
-		defer cancel()
-
-		go func(ctx context.Context) {
-			select {
-			case <-time.After(3 * time.Second):
+		go func() {
+			for {
 				klog.Info(resc.Sprintf("trying to copy cert..."))
 				cmd := "cp c:\\etc\\kubernetes\\pki\\ca.crt c:\\var\\lib\\minikube\\certs\\ca.crt"
-				if _, err = r.run(cmd); err != nil {
+				if _, err = r.run(cmd); err == nil {
+					break
 				}
 			}
-		}(ctx)
+		}()
 
 		// Add the control plane into hosts and start the join command.
 		cmd = fmt.Sprintf(`$env:Path += ';c:\\k\\'; %s`, strings.Trim(lout, " \n"))
