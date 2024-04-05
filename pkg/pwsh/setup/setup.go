@@ -1,15 +1,12 @@
 package setup
 
 import (
-	"bufio"
 	"fmt"
 	"github.com/fatih/color"
 	klog "k8s.io/klog/v2"
-	"os"
 	"strings"
 	"swdt/pkg/connections"
 	"swdt/pkg/exec"
-	"time"
 )
 
 var (
@@ -88,7 +85,7 @@ func (r *SetupRunner) EnableRDP(enable bool) error {
 }
 
 // InstallContainerd install the containerd bits with the set version, enabled required services.
-func (r *SetupRunner) InstallContainerd(containerd string, skip bool) error {
+func (r *SetupRunner) InstallContainerd(containerd string) error {
 	klog.Info(resc.Sprintf("Installing containerd."))
 
 	// Install containerd if service is not running.
@@ -98,41 +95,11 @@ func (r *SetupRunner) InstallContainerd(containerd string, skip bool) error {
 		if err != nil {
 			return err
 		}
-		if askForInput(skip) {
-			if _, err := r.run(`shutdown /r /t 0`); err != nil {
-				return err
-			}
-			klog.Info(resc.Println("Waiting for machine to boot back, before rerunning the script."))
-			time.Sleep(60 * time.Second) // get a better way to ensure the machine is back.
-			// Try to reconnect again.
-			if err = r.conn.Connect(); err != nil {
-				return err
-			}
-			return r.InstallContainerd(containerd, true)
-		}
 		klog.Info(resc.Sprintf("%s -- Containerd v%s installed with success.", output, containerd))
 	} else if strings.Contains(output, "Running") { // Otherwise skip
 		klog.Info(resc.Sprintf("Skipping containerd installation, service already running, use the copy command."))
 	}
 	return nil
-}
-
-func askForInput(skip bool) bool {
-	if skip {
-		return false
-	}
-	reader := bufio.NewReader(os.Stdin)
-	for {
-		fmt.Printf("Reboot the node now? [y/n]: ")
-		response, _ := reader.ReadString('\n')
-		response = strings.ToLower(strings.TrimSpace(response))
-		if response == "y" || response == "yes" {
-			return true
-		} else if response == "n" || response == "no" {
-			return false
-		}
-	}
-
 }
 
 // InstallKubernetes install all Kubernetes bits with the set version.

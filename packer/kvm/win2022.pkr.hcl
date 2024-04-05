@@ -49,7 +49,7 @@ source "qemu" "windows" {
   ssh_timeout  = "1h"
 
   boot_wait        = "10s"
-  shutdown_command = "shutdown /s /t 50 /f"
+  shutdown_command = "shutdown /s /t 120 /f"
   shutdown_timeout = "15m"
 }
 
