@@ -28,7 +28,7 @@ import (
 )
 
 var (
-	windowsHost      = "windows"
+	windowsHost      = "win2k22"
 	controlPlaneHost = "minikube"
 )
 
@@ -92,7 +92,7 @@ func RunSetup(cmd *cobra.Command, args []string) error {
 
 	// Installing Containerd with predefined version
 	containerd := config.Spec.Workload.ContainerdVersion
-	if err = runner.Inner.InstallContainerd(containerd); err != nil {
+	if err = runner.Inner.InstallContainerd(containerd, false); err != nil {
 		return err
 	}
 

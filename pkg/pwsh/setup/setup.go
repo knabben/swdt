@@ -1,10 +1,12 @@
 package setup
 
 import (
+	"bufio"
 	"context"
 	"fmt"
 	"github.com/fatih/color"
 	klog "k8s.io/klog/v2"
+	"os"
 	"strings"
 	"swdt/pkg/connections"
 	"swdt/pkg/exec"
@@ -87,21 +89,51 @@ func (r *SetupRunner) EnableRDP(enable bool) error {
 }
 
 // InstallContainerd install the containerd bits with the set version, enabled required services.
-func (r *SetupRunner) InstallContainerd(containerd string) error {
+func (r *SetupRunner) InstallContainerd(containerd string, skip bool) error {
 	klog.Info(resc.Sprintf("Installing containerd."))
+
+	// Install containerd if service is not running.
 	if output, err := r.run("get-service -name containerd"); err != nil {
-		// Install containerd if service is not running.
-		cmd := fmt.Sprintf(".\\Install-Containerd.ps1 -ContainerDVersion %s; shutdown /r /t 0", containerd)
+		cmd := fmt.Sprintf(".\\Install-Containerd.ps1 -ContainerDVersion %s", containerd)
 		output, err := r.run(`curl.exe -LO https://raw.githubusercontent.com/kubernetes-sigs/sig-windows-tools/master/hostprocess/Install-Containerd.ps1; ` + cmd)
 		if err != nil {
-			klog.Info(resc.Sprintf("retrying to run the script..."))
-			return r.InstallContainerd(containerd)
+			return err
+		}
+		if askForInput(skip) {
+			if _, err := r.run(`shutdown /r /t 0`); err != nil {
+				return err
+			}
+			klog.Info(resc.Println("Waiting for machine to boot back, before rerunning the script."))
+			time.Sleep(60 * time.Second) // get a better way to ensure the machine is back.
+			// Try to reconnect again.
+			if err = r.conn.Connect(); err != nil {
+				return err
+			}
+			return r.InstallContainerd(containerd, true)
 		}
 		klog.Info(resc.Sprintf("%s -- Containerd v%s installed with success.", output, containerd))
 	} else if strings.Contains(output, "Running") { // Otherwise skip
 		klog.Info(resc.Sprintf("Skipping containerd installation, service already running, use the copy command."))
 	}
 	return nil
+}
+
+func askForInput(skip bool) bool {
+	if skip {
+		return false
+	}
+	reader := bufio.NewReader(os.Stdin)
+	for {
+		fmt.Printf("Reboot the node now? [y/n]: ")
+		response, _ := reader.ReadString('\n')
+		response = strings.ToLower(strings.TrimSpace(response))
+		if response == "y" || response == "yes" {
+			return true
+		} else if response == "n" || response == "no" {
+			return false
+		}
+	}
+
 }
 
 // InstallKubernetes install all Kubernetes bits with the set version.
@@ -152,17 +184,17 @@ func (r *SetupRunner) JoinNode(cpVersion, cpIPAddr string) error {
 			return err
 		}
 		// Trigger a goroutine to copy the ca.crt from kubernetes/pki to the CA folder.
-		var ctx = context.Background()
+		ctx := context.Background()
+		ctx, cancel := context.WithTimeout(ctx, 30*time.Second)
+		defer cancel()
+
 		go func(ctx context.Context) {
 			select {
-			case <-time.After(2 * time.Second):
-				cmd := "cp c:\\etc\\kubernetes\\pki\\ca.crt c:\\var\\lib\\minikube\\certs\\ca.crt"
-				if _, err = r.run(cmd); err == nil {
-					ctx.Done()
-				}
+			case <-time.After(3 * time.Second):
 				klog.Info(resc.Sprintf("trying to copy cert..."))
-			case <-ctx.Done():
-				return
+				cmd := "cp c:\\etc\\kubernetes\\pki\\ca.crt c:\\var\\lib\\minikube\\certs\\ca.crt"
+				if _, err = r.run(cmd); err != nil {
+				}
 			}
 		}(ctx)
 

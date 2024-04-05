@@ -20,7 +20,7 @@ variable "windows_sha256" {
 }
 
 source "qemu" "windows" {
-  vm_name     = "win2k22"
+  vm_name     = "windows"
   format      = "qcow2"
   accelerator = "kvm"
 

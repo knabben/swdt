@@ -45,9 +45,12 @@ func RunDestroy(cmd *cobra.Command, args []string) error {
 	if err = destroyWindowsDomain(config); err != nil {
 		return err
 	}
-	// Delete minikube
-	if _, err = exec.Execute(exec.RunCommand, "minikube", "delete", "--purge"); err != nil {
-		return err
+
+	if config.Spec.ControlPlane.Minikube {
+		// Delete minikube
+		if _, err = exec.Execute(exec.RunCommand, "minikube", "delete", "--purge"); err != nil {
+			return err
+		}
 	}
 	return nil
 }
