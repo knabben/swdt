@@ -2,7 +2,8 @@
 name: Unit Test
 
 on:
-  workflow_call:
+  branch:
+    "*"
 
 jobs:
   test:
