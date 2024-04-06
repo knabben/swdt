@@ -2,8 +2,11 @@
 name: Unit Test
 
 on:
-  branch:
-    "*"
+  push:
+    branches:
+      - '*'
+    tags:
+      - 'v*'
 
 jobs:
   test:
