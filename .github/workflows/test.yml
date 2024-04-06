@@ -26,5 +26,5 @@ jobs:
     # Run unit tests
     - id: test
       run: |
-        apt-get install -y libvirt-devel
+        sudo apt-get install -y libvirt-devel
         make test
