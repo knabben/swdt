@@ -1,0 +1,3 @@
+hostNetwork: true
+containers:
+  - image: kube-proxy:{{.KUBERNETES_VERSION}}-calico-hostprocess
