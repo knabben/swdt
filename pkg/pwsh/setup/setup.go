@@ -119,7 +119,7 @@ func (r *SetupRunner) InstallKubernetes(kubernetes string) error {
 }
 
 // JoinNode joins the Windows node into control-plane cluster.
-func (r *SetupRunner) JoinNode(cpVersion, cpIPAddr string) error {
+func (r *SetupRunner) JoinNode(executor interface{}, cpVersion, cpIPAddr string) error {
 	var (
 		err    error
 		output string
@@ -134,7 +134,7 @@ func (r *SetupRunner) JoinNode(cpVersion, cpIPAddr string) error {
 			fmt.Sprintf("/var/lib/minikube/binaries/%s/kubeadm", cpVersion),
 			"token", "create", "--print-join-command",
 		}
-		if lout, err = exec.Execute(exec.RunCommand, lcmd...); err != nil {
+		if lout, err = exec.Execute(executor, lcmd...); err != nil {
 			return err
 		}
 		// Force the creation of the minikube folder for certificates

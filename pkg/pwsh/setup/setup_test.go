@@ -99,7 +99,9 @@ func TestInstallContainerdRunning(t *testing.T) {
 	r := startRunner(&responses)
 	err := r.InstallContainerd("v3.27")
 	assert.Nil(t, err)
-	assertCalls(t, []string{"get-service -name containerd", ".\\Install-Containerd"})
+	assertCalls(t, []string{
+		"get-service -name containerd", ".\\Install-Containerd",
+	})
 }
 
 func TestInstallKubernetes(t *testing.T) {
@@ -113,11 +115,53 @@ func TestInstallKubernetes(t *testing.T) {
 			error:    nil,
 		},
 	}
-
 	r := startRunner(&responses)
 	err := r.InstallKubernetes("v1.29.0")
 	assert.Nil(t, err)
-	assertCalls(t, []string{"get-service -name kubelet", ".\\PrepareNode.ps1 -KubernetesVersion v1.29.0"})
+	assertCalls(t, []string{
+		"get-service -name kubelet", ".\\PrepareNode.ps1 -KubernetesVersion v1.29.0",
+	})
+}
+
+func TestJoinNodeSkip(t *testing.T) {
+	responses := []Response{
+		{
+			response: "Running",
+			error:    nil,
+		},
+	}
+	r := startRunner(&responses)
+	err := r.JoinNode(nil, "v1.29.0", "192.168.0.1")
+	assert.Nil(t, err)
+	assertCalls(t, []string{"get-service -name kubelet"})
+}
+
+func TestJoinNodeRunner(t *testing.T) {
+	responses := []Response{
+		{
+			response: "Stopped",
+			error:    nil,
+		},
+		{
+			response: "",
+			error:    nil,
+		},
+		{
+			response: "",
+			error:    nil,
+		},
+		{
+			response: "",
+			error:    nil,
+		},
+	}
+	r := startRunner(&responses)
+	fn := func(cmd ...string) (string, error) {
+		return "", nil
+	}
+	err := r.JoinNode(fn, "v1.29.0", "192.168.0.1")
+	assert.Nil(t, err)
+	assertCalls(t, []string{"get-service -name kubelet", "mkdir", "Add-content", "$env:Path"})
 }
 
 func assertCalls(t *testing.T, rcalls []string) {

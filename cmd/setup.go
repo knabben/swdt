@@ -107,7 +107,7 @@ func RunSetup(cmd *cobra.Command, args []string) error {
 
 		// Joining the Windows node in the control plane.
 		cpKubernetes := config.Spec.ControlPlane.KubernetesVersion
-		if err = runner.Inner.JoinNode(cpKubernetes, controlPlaneIP); err != nil {
+		if err = runner.Inner.JoinNode(exec.RunCommand, cpKubernetes, controlPlaneIP); err != nil {
 			return err
 		}
 	*/
