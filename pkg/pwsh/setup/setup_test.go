@@ -73,8 +73,8 @@ func TestInstallContainerdSkip(t *testing.T) {
 			error:    nil,
 		},
 		{
-			response: "Running",
-			error:    errors.New("blau"),
+			response: "",
+			error:    errors.New("error"),
 		},
 	}
 
@@ -100,6 +100,24 @@ func TestInstallContainerdRunning(t *testing.T) {
 	err := r.InstallContainerd("v3.27")
 	assert.Nil(t, err)
 	assertCalls(t, []string{"get-service -name containerd", ".\\Install-Containerd"})
+}
+
+func TestInstallKubernetes(t *testing.T) {
+	responses := []Response{
+		{
+			response: "",
+			error:    errors.New(""),
+		},
+		{
+			response: "",
+			error:    nil,
+		},
+	}
+
+	r := startRunner(&responses)
+	err := r.InstallKubernetes("v1.29.0")
+	assert.Nil(t, err)
+	assertCalls(t, []string{"get-service -name kubelet", ".\\PrepareNode.ps1 -KubernetesVersion v1.29.0"})
 }
 
 func assertCalls(t *testing.T, rcalls []string) {
