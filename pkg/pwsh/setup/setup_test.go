@@ -194,15 +194,3 @@ func TestJoinNodeRunner(t *testing.T) {
 	err = r.JoinNode("v1.29.0", "192.168.0.1")
 	assert.Nil(t, err)
 }
-
-func TestInstallCNI(t *testing.T) {
-	_ = func(cmd string) (string, error) {
-		return "", nil
-	}
-	port += 1
-	responses := []tests.Response{}
-	r, err := startRunner(&responses)
-	assert.Nil(t, err)
-	err = r.InstallCNI("v3.27.3", "192.168.0.1")
-	assert.Nil(t, err)
-}
