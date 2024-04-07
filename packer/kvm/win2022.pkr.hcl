@@ -35,13 +35,13 @@ source "qemu" "windows" {
   disk_interface = "virtio"
 
   floppy_files = [
-    "kvm/floppy/autounattend.xml",
-    "kvm/floppy/bootstrap.ps1",
-    "kvm/floppy/ssh_key.pub"
+    "packer/kvm/floppy/autounattend.xml",
+    "packer/kvm/floppy/bootstrap.ps1",
+    "packer/kvm/floppy/ssh_key.pub"
   ]
   qemuargs = [["-cdrom", var.virtio_iso]]
 
-  output_directory = "output"
+  output_directory = "packer/output"
 
   communicator = "ssh"
   ssh_username = "Administrator"

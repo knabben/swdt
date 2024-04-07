@@ -167,7 +167,6 @@ func (r *Runner) JoinNode(cpVersion, cpIPAddr string) error {
 
 	// In case kubelet is already running, skip joining procedure.
 	if err = r.runR("get-service -name kubelet"); err == nil && !strings.Contains(output, "Running") {
-		fmt.Println("outputttt ", output)
 		// Control plane token create and extract, saving the final command
 		lcmd := strings.Join([]string{
 			"minikube", "ssh", "--", "sudo", fmt.Sprintf("/var/lib/minikube/binaries/%s/kubeadm", cpVersion),
@@ -210,7 +209,7 @@ func (r *Runner) JoinNode(cpVersion, cpIPAddr string) error {
 }
 
 // InstallCNI installs Calico CNI receiving a specific version.
-func (r *Runner) InstallCNI(calicoVersion, controlPlaneIP string) error {
+func (r *Runner) InstallCNI(calicoVersion, cpKubernetes, controlPlaneIP string) error {
 	var loutput string
 
 	go exec.EnableOutput(&loutput, r.local.Stdout)
@@ -224,7 +223,7 @@ func (r *Runner) InstallCNI(calicoVersion, controlPlaneIP string) error {
 	if content, err = templates.OpenYAMLFile("./specs/kube-proxy.yml"); err != nil {
 		return err
 	}
-	kpTmpl := templates.KubeProxyTmpl{KUBERNETES_VERSION: calicoVersion}
+	kpTmpl := templates.KubeProxyTmpl{KUBERNETES_VERSION: cpKubernetes}
 	t, _ := templates.ChangeTemplate(string(content), kpTmpl)
 	kpTempFile := templates.SaveFile(t)
 	defer templates.DeleteFile(kpTempFile)
@@ -244,7 +243,8 @@ func (r *Runner) InstallCNI(calicoVersion, controlPlaneIP string) error {
 		{"kubectl", "create", "-f", "./specs/installation.yaml"},
 		{"kubectl", "create", "-f", cpTempFile},
 		{"kubectl", "create", "-f", kpTempFile},
-		{"kubectl", "patch", "ipamconfigurations", "default", "--type", "merge", "--patch=" + string(templates.GetSpecAffinity())},
+		{"sleep 10"},
+		{"kubectl", "patch", "ipamconfig", "default", "--type", "merge", "--patch=" + string(templates.GetSpecAffinity())},
 	}
 	for i := 0; i <= len(steps)-1; i++ {
 		cmd := strings.Join(steps[i], " ")

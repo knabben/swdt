@@ -103,7 +103,7 @@ func RunSetup(cmd *cobra.Command, args []string) error {
 
 	// Install Calico CNI operator and CR
 	// NOTE: Only Calico is supported for now on HPC
-	return r.Inner.InstallCNI(config.Spec.CalicoVersion, controlPlaneIP)
+	return r.Inner.InstallCNI(config.Spec.CalicoVersion, cpKubernetes, controlPlaneIP)
 }
 
 // findPrivateIPs returns the leased ips from the domain.

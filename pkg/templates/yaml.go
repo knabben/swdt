@@ -55,7 +55,7 @@ func GetSpecAffinity() (content []byte) {
 }
 
 func SaveFile(content string) string {
-	fd, _ := os.CreateTemp("/tmp", "*yaml")
+	fd, _ := os.CreateTemp("/tmp", "*.yaml")
 	_, _ = fd.WriteString(content)
 	return fd.Name()
 }

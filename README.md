@@ -8,6 +8,14 @@ This document is a reference for the *Wave (Windows Automated Virtual Environmen
 
 Follow the [docs](../../docs) for more information.
 
+## Running
+
+1. `make packer` - Build the Windows QEMU2 image under `packer/output/windows`
+2. `make start` - Start both Minikube and Windows domain via Libvirt
+3. `make setup` - Install all binaries and required Kubernetes pieces in the Windows node
+4. `make copy PROVISIONER="containerd"` - Copy the provisioner to the running node and restart the sevice
+4. `make destroy` - Cleanup everything
+
 ## Subcommands and namespace
 
 These are the current supported subcommands for the program:
