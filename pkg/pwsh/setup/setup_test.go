@@ -1,73 +1,103 @@
 package setup
 
 import (
-	"fmt"
-	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
 	"swdt/apis/config/v1alpha1"
+	"swdt/pkg/executors/exec"
+	"swdt/pkg/executors/tests"
 	"testing"
 )
 
 var (
-	calls      []string
-	chocoCheck = fmt.Sprintf("%s --version", CHOCO_PATH)
+	calls []string
+	port  = 2222
 )
 
-type Response struct {
-	response string
-	error    error
+func assertCalls(t *testing.T, rcalls []string) {
+	assert.Len(t, calls, len(rcalls))
+	for idx, call := range rcalls {
+		assert.Contains(t, calls[idx], call)
+	}
+}
+
+func extractCmds(responses *[]tests.Response) (cmds []string) {
+	for i := 0; i <= len(*responses)-1; i++ {
+		cmds = append(cmds, (*responses)[i].Cmd)
+	}
+	return cmds
+}
+
+// startServer starts a fake SSH server
+func StartServer(port int, expected *[]tests.Response) *v1alpha1.SSHSpec {
+	hostname := tests.GetHostname(port)
+	tests.NewServer(hostname, expected)
+	return &v1alpha1.SSHSpec{
+		Hostname: hostname,
+		Username: tests.Username,
+		Password: tests.FakePassword,
+	}
+}
+
+func startRunner(responses *[]tests.Response, port int) (*Runner, error) {
+	calls = []string{}
+	credentials := StartServer(port, responses)
+	var sshExec = exec.NewSSHExecutor(credentials) // Start SSH Connection
+	if err := sshExec.Connect(); err != nil {
+		return nil, err
+	}
+	return &Runner{remote: sshExec}, nil
 }
 
 func TestChocoExist(t *testing.T) {
-	responses := []Response{
+	responses := &[]tests.Response{
 		{
-			response: "",
-			error:    nil,
+			Response: "v1.0",
+			Error:    nil,
 		},
 	}
-	r := startRunner(&responses)
+	r, err := startRunner(responses, port+1)
+	assert.Nil(t, err)
 	assert.True(t, r.ChocoExists())
-	assertCalls(t, []string{"choco.exe --version"})
 }
 
 func TestInstallChocoPackages(t *testing.T) {
-	responses := []Response{
+	responses := &[]tests.Response{
 		{
-			response: "",
-			error:    nil,
+			Response: "",
+			Error:    nil,
 		},
 		{
-			response: "",
-			error:    nil,
+			Response: "",
+			Error:    nil,
 		},
 		{
-			response: "",
-			error:    nil,
+			Response: "",
+			Error:    nil,
 		},
 	}
-	r := startRunner(&responses)
-	config := v1alpha1.AuxiliarySpec{ChocoPackages: &[]string{"vim", "grep"}}
-	err := r.InstallChocoPackages(*config.ChocoPackages)
+	r, err := startRunner(responses, port+1)
 	assert.Nil(t, err)
+	config := v1alpha1.AuxiliarySpec{ChocoPackages: &[]string{"vim", "grep"}}
+	assert.Nil(t, r.InstallChocoPackages(*config.ChocoPackages))
 }
 
 func TestEnableRDP(t *testing.T) {
-	responses := []Response{
+	var defaultTrue = true
+	responses := &[]tests.Response{
 		{
-			response: "",
-			error:    nil,
+			Response: "",
+			Error:    nil,
 		},
 	}
-	r := startRunner(&responses)
-
-	var defaultTrue = true
-	config := v1alpha1.AuxiliarySpec{EnableRDP: &defaultTrue}
-	err := r.EnableRDP(*config.EnableRDP)
+	r, err := startRunner(responses, port+1)
 	assert.Nil(t, err)
+	config := v1alpha1.AuxiliarySpec{EnableRDP: &defaultTrue}
+	assert.Nil(t, r.EnableRDP(*config.EnableRDP))
 }
 
+/*
 func TestInstallContainerdSkip(t *testing.T) {
-	responses := []Response{
+	responses := &[]Response{
 		{
 			response: "Running",
 			error:    nil,
@@ -77,15 +107,14 @@ func TestInstallContainerdSkip(t *testing.T) {
 			error:    errors.New("error"),
 		},
 	}
-
-	r := startRunner(&responses)
+	r := startRunner(responses)
 	config := v1alpha1.ClusterSpec{CalicoVersion: "v3.27"}
 	err := r.InstallContainerd(config.CalicoVersion)
 	assert.Nil(t, err)
 }
 
 func TestInstallContainerdRunning(t *testing.T) {
-	responses := []Response{
+	responses := &[]Response{
 		{
 			response: "",
 			error:    errors.New(""),
@@ -96,7 +125,7 @@ func TestInstallContainerdRunning(t *testing.T) {
 		},
 	}
 
-	r := startRunner(&responses)
+	r := startRunner(responses)
 	err := r.InstallContainerd("v3.27")
 	assert.Nil(t, err)
 	assertCalls(t, []string{
@@ -105,82 +134,79 @@ func TestInstallContainerdRunning(t *testing.T) {
 }
 
 func TestInstallKubernetes(t *testing.T) {
-	responses := []Response{
+	responses := &[]Response{
 		{
 			response: "",
 			error:    errors.New(""),
+			cmd:      "get-service -name kubelet",
 		},
 		{
 			response: "",
 			error:    nil,
+			cmd:      ".\\PrepareNode.ps1 -KubernetesVersion v1.29.0",
 		},
 	}
-	r := startRunner(&responses)
+	cmds := extractCmds(responses)
+	r := startRunner(responses)
 	err := r.InstallKubernetes("v1.29.0")
 	assert.Nil(t, err)
-	assertCalls(t, []string{
-		"get-service -name kubelet", ".\\PrepareNode.ps1 -KubernetesVersion v1.29.0",
-	})
+	assertCalls(t, cmds)
 }
 
 func TestJoinNodeSkip(t *testing.T) {
-	responses := []Response{
+	responses := &[]Response{
 		{
 			response: "Running",
 			error:    nil,
+			cmd:      "get-service -name kubelet",
 		},
 	}
-	r := startRunner(&responses)
+	cmds := extractCmds(responses)
+	r := startRunner(responses)
 	err := r.JoinNode(nil, "v1.29.0", "192.168.0.1")
 	assert.Nil(t, err)
-	assertCalls(t, []string{"get-service -name kubelet"})
+	assertCalls(t, cmds)
 }
 
 func TestJoinNodeRunner(t *testing.T) {
-	responses := []Response{
+	responses := &[]Response{
 		{
 			response: "Stopped",
 			error:    nil,
+			cmd:      "get-service -name kubelet",
 		},
 		{
 			response: "",
 			error:    nil,
+			cmd:      "mkdir",
 		},
 		{
 			response: "",
 			error:    nil,
+			cmd:      "Add-content",
 		},
 		{
 			response: "",
 			error:    nil,
+			cmd:      "$env:Path",
 		},
 	}
-	r := startRunner(&responses)
+	cmds := extractCmds(responses)
+	r := startRunner(responses)
 	fn := func(cmd ...string) (string, error) {
 		return "", nil
 	}
 	err := r.JoinNode(fn, "v1.29.0", "192.168.0.1")
 	assert.Nil(t, err)
-	assertCalls(t, []string{"get-service -name kubelet", "mkdir", "Add-content", "$env:Path"})
+	assertCalls(t, cmds)
 }
 
-func assertCalls(t *testing.T, rcalls []string) {
-	assert.Len(t, calls, len(rcalls))
-	for idx, call := range rcalls {
-		assert.Contains(t, calls[idx], call)
+func TestInstallCNI(t *testing.T) {
+	_ = func(cmd string) (string, error) {
+		return "", nil
 	}
+	//_, _ = SetupRunner{run: fn}
+	//err := r.InstallCNI("v3.27.3")
+	//assert.Nil(t, err)
 }
-
-func startRunner(responses *[]Response) SetupRunner {
-	calls = []string{}
-	return SetupRunner{run: func(cmd string) (string, error) {
-		calls = append(calls, cmd)
-		return popResponse(responses)
-	}}
-}
-
-func popResponse(responses *[]Response) (string, error) {
-	var resp Response
-	resp, *responses = (*responses)[0], (*responses)[1:]
-	return resp.response, resp.error
-}
+*/

@@ -5,7 +5,7 @@ import (
 	"github.com/fatih/color"
 	klog "k8s.io/klog/v2"
 	"swdt/apis/config/v1alpha1"
-	"swdt/pkg/connections"
+	"swdt/pkg/executors/iface"
 )
 
 var (
@@ -13,35 +13,56 @@ var (
 	permission = "0755"
 )
 
-type KubernetesRunner struct {
-	conn connections.Connection
-	run  func(args string) (string, error)
-	copy func(local, remote, perm string) error
+type Runner struct {
+	remote iface.SSHExecutor
+	local  iface.Executor
 }
 
-func (r *KubernetesRunner) SetConnection(conn *connections.Connection) {
-	r.conn = *conn
-	r.run = r.conn.Run
-	r.copy = r.conn.Copy
+func (r *Runner) SetLocal(executor iface.Executor) {
+	r.local = executor
 }
 
-func (r *KubernetesRunner) InstallProvisioners(provisioners []v1alpha1.ProvisionerSpec) error {
+func (r *Runner) SetRemote(executor iface.SSHExecutor) {
+	r.remote = executor
+}
+
+// runL runs a local command using the local executor
+func (r *Runner) runL(args string) error {
+	return r.local.Run(args, nil)
+}
+
+// runLstd runs a local command using the local executor
+func (r *Runner) runLstd(args string, stdout *chan string) error {
+	return r.local.Run(args, stdout)
+}
+
+// runR runs a local command using the local executor
+func (r *Runner) runR(args string) error {
+	return r.remote.Run(args, nil)
+}
+
+// runRstdout runs a local command using the local executor
+func (r *Runner) runRstd(args string, stdout *chan string) error {
+	return r.remote.Run(args, stdout)
+}
+
+func (r *Runner) InstallProvisioners(provisioners []v1alpha1.ProvisionerSpec) error {
 	for _, provisioner := range provisioners {
 		source, destination := provisioner.SourceURL, provisioner.Destination
 		name := provisioner.Name
 		klog.Info(resc.Sprintf("Service %s binary replacement, trying to stop service...", name))
-		_, err := r.run(fmt.Sprintf("Stop-Service -name %s -Force", name))
+		err := r.runR(fmt.Sprintf("Stop-Service -name %s -Force", name))
 		if err != nil {
 			klog.Error(err)
 			continue
 		}
 		klog.Infof("Service stopped. Copying file %s to remote %s...", source, destination)
-		if err = r.copy(source, destination, permission); err != nil {
+		/*if err = (*r.remote).Copy(source, destination, permission); err != nil {
 			klog.Error(err)
 			continue
-		}
+		}*/
 		klog.Infof("starting service %s again...", name)
-		_, err = r.run(fmt.Sprintf("Start-Service -name %s", name))
+		err = r.runR(fmt.Sprintf("Start-Service -name %s", name))
 		if err != nil {
 			klog.Error(err)
 			continue

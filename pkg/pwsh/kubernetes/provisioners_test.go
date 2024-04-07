@@ -11,9 +11,9 @@ var (
 	calls = []string{}
 )
 
-func validateRun(args string) (string, error) {
+func validateRun(args string) error {
 	calls = append(calls, args)
-	return "cmd stdout", nil
+	return nil
 }
 
 func validateCopy(l, r, p string) error {
