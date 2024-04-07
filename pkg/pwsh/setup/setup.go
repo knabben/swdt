@@ -161,6 +161,8 @@ func (r *Runner) JoinNode(cpVersion, cpIPAddr string) error {
 		output, loutput string
 	)
 
+	klog.Info(mainc.Sprintf("Joining the node into the cluster."))
+
 	go exec.EnableOutput(&output, r.remote.Stdout)
 	go exec.EnableOutput(&output, r.remote.Stderr)
 	go exec.EnableOutput(&loutput, r.local.Stdout)
@@ -212,6 +214,8 @@ func (r *Runner) JoinNode(cpVersion, cpIPAddr string) error {
 func (r *Runner) InstallCNI(calicoVersion, cpKubernetes, controlPlaneIP string) error {
 	var loutput string
 
+	klog.Info(mainc.Sprintf("Installing Calico CNI %s.", calicoVersion))
+
 	go exec.EnableOutput(&loutput, r.local.Stdout)
 	go exec.EnableOutput(&loutput, r.local.Stderr)
 
@@ -259,9 +263,9 @@ loop:
 	for {
 		select {
 		case <-time.After(10 * time.Second):
-			cmd := []string{"kubectl", "patch", "ipamconfig", "default", "--type", "merge", "--patch='" + string(templates.GetSpecAffinity()) + "'"}
+			cmd := []string{"kubectl", "patch", "ipamconfig", "default", "--type", "merge", "--patch=" + string(templates.GetSpecAffinity())}
 			if err := r.runL(strings.Join(cmd, " ")); err != nil {
-				bad.Printf("calico error: %v\n", err)
+				bad.Printf("calico error: trying to apply %s - %v\n", cmd, err)
 			} else {
 				break loop
 			}
