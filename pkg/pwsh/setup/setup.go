@@ -243,14 +243,28 @@ func (r *Runner) InstallCNI(calicoVersion, cpKubernetes, controlPlaneIP string) 
 		{"kubectl", "create", "-f", "./specs/installation.yaml"},
 		{"kubectl", "create", "-f", cpTempFile},
 		{"kubectl", "create", "-f", kpTempFile},
-		{"sleep 10"},
-		{"kubectl", "patch", "ipamconfig", "default", "--type", "merge", "--patch=" + string(templates.GetSpecAffinity())},
 	}
+
 	for i := 0; i <= len(steps)-1; i++ {
 		cmd := strings.Join(steps[i], " ")
 		resc.Printf("Running: %v\n", cmd)
 		if err := r.runL(cmd); err != nil {
 			bad.Printf("%v", err)
+		}
+	}
+
+	// strictAffinity exists after the Installation object ready, this can take a while
+	// try in loop each 10 seconds.
+loop:
+	for {
+		select {
+		case <-time.After(10 * time.Second):
+			cmd := []string{"kubectl", "patch", "ipamconfig", "default", "--type", "merge", "--patch='" + string(templates.GetSpecAffinity()) + "'"}
+			if err := r.runL(strings.Join(cmd, " ")); err != nil {
+				bad.Printf("calico error: %v\n", err)
+			} else {
+				break loop
+			}
 		}
 	}
 
