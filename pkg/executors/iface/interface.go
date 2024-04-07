@@ -14,26 +14,28 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package connections
+package iface
 
-import (
-	"swdt/apis/config/v1alpha1"
-)
-
-type Connection interface {
-	// Connect creates the initial connection objects
-	Connect() error
-
+// Executor is a generic interface executing commands.
+type Executor interface {
 	// Run execute the command via transport method
-	Run(args string) (string, error)
+	Run(args string, stdout *chan string) error
+
+	// Stdout and stderr iface channel setters
+	Stdout(std *chan string)
+	Stderr(std *chan string)
+}
+
+// SSHExecutor is a interface for SSH connections.
+type SSHExecutor interface {
+	Executor
 
 	// Copy files from and to the node
 	Copy(local, remote, perm string) error
 
+	// Connect creates the initial connection objects
+	Connect() error
+
 	// Close the used connection and sessions
 	Close() error
-}
-
-func NewConnection(credentials *v1alpha1.SSHSpec) Connection {
-	return &SSHConnection{creds: credentials}
 }

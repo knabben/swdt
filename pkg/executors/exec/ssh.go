@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package connections
+package exec
 
 import (
 	"bytes"
@@ -28,6 +28,7 @@ import (
 	"regexp"
 	"strings"
 	"swdt/apis/config/v1alpha1"
+	"swdt/pkg/executors/iface"
 	"sync"
 	"time"
 
@@ -45,12 +46,29 @@ const (
 )
 
 var (
-	resc = color.New(color.FgHiGreen).Add(color.Bold)
+	resc = color.New(color.FgBlue)
 )
 
 type SSHConnection struct {
-	creds  *v1alpha1.SSHSpec
 	client *ssh.Client
+	creds  *v1alpha1.SSHSpec
+
+	mu     sync.Mutex
+	stdout *chan string // Connection stdout channel
+	stderr *chan string // Connection stderr channel
+}
+
+func (c *SSHConnection) Stdout(std *chan string) {
+	c.stdout = std
+}
+
+func (c *SSHConnection) Stderr(std *chan string) {
+	c.stderr = std
+}
+
+// NewSSHExecutor returns a specialized SSH connection
+func NewSSHExecutor(credentials *v1alpha1.SSHSpec) iface.SSHExecutor {
+	return &SSHConnection{creds: credentials}
 }
 
 // fetchAuthMethod fetches all available authentication methods
@@ -91,7 +109,6 @@ func (c *SSHConnection) Connect() error {
 	if err != nil {
 		return err
 	}
-
 	klog.V(2).Infof("SSH connecting to '%s' as '%s'\n", c.creds.Hostname, c.creds.Username)
 	client, err := ssh.Dial(TCP_TYPE, fmt.Sprintf("%s", c.creds.Hostname), &ssh.ClientConfig{
 		User:            c.creds.Username,
@@ -106,37 +123,43 @@ func (c *SSHConnection) Connect() error {
 }
 
 // Run a powershell command passed in the argument
-func (c *SSHConnection) Run(args string) (string, error) {
+func (c *SSHConnection) Run(args string, stdchan *chan string) error {
 	if c.client == nil {
-		return "", fmt.Errorf("client is empty, call Connect() first")
+		return fmt.Errorf("client is empty, call Connect() first")
 	}
 
 	var (
 		err     error
 		session *ssh.Session
-		stdout  bytes.Buffer
-		stderr  bytes.Buffer
+		stderr  io.Reader
+		stdout  io.Reader
 	)
+
 	if session, err = c.client.NewSession(); err != nil {
-		return "", err
+		return err
 	}
-	defer session.Close()
+	defer session.Close() // nolint
 
-	session.Stdout = &stdout
-	session.Stderr = &stderr
-
-	// Multiline PowerShell commands over SSH trip over newlines - only first one is executed
 	args = regexp.MustCompile(`\r?\n`).ReplaceAllLiteralString(args, ";")
 	cmd := fmt.Sprintf(`powershell -NoLogo -Command "%v"`, strings.Trim(args, "\n"))
 	resc.Printf("SSH: %s\n", cmd)
-	if err := session.Run(cmd); err != nil {
-		return "", err
+
+	if c.stdout != nil || stdchan != nil {
+		// Send command stdout to stdout channel in not empty.
+		stdout, _ = session.StdoutPipe()
+		if stdchan == nil {
+			stdchan = c.stdout
+		}
+		go redirectStandard(&c.mu, stdout, stdchan)
 	}
 
-	if stderr.Len() > 0 {
-		err = errors.New(stderr.String())
+	if c.stderr != nil {
+		// Send command stderr to stderr channel if not empty.
+		stderr, _ = session.StderrPipe()
+		go redirectStandard(&c.mu, stderr, c.stderr)
 	}
-	return stdout.String(), err
+
+	return session.Run(cmd)
 }
 
 // Copy a file from local to remote setting the permissions

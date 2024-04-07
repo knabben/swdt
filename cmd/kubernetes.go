@@ -17,6 +17,7 @@ limitations under the License.
 package cmd
 
 import (
+	"log"
 	"swdt/apis/config/v1alpha1"
 	"swdt/pkg/pwsh/executor"
 	"swdt/pkg/pwsh/kubernetes"
@@ -41,11 +42,16 @@ func RunKubernetes(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	runner, err := executor.NewRunner(config, &kubernetes.KubernetesRunner{})
+	// Starting the executor
+	runner, err := executor.NewRunner(config.Spec.Workload.Virtualization.SSH, &kubernetes.KubernetesRunner{})
 	if err != nil {
 		return err
 	}
-	defer runner.CloseConnection() // nolint
+	defer func(runner *executor.Runner[*kubernetes.KubernetesRunner]) {
+		if err := runner.CloseConnection(); err != nil {
+			log.Fatalf("error to close the connection: %v\n", err)
+		}
+	}(runner)
 
 	return runner.Inner.InstallProvisioners(config.Spec.Workload.Provisioners)
 }

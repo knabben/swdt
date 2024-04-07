@@ -53,22 +53,26 @@ KaT3SUfkvAKQEAAAAOYWtuYWJiZW5AaG9ydXMBAgMEBQ==
 -----END OPENSSH PRIVATE KEY-----`)
 )
 
-func NewServer(hostname, expected string) {
+type Response struct {
+	Response string
+	Error    error
+	Cmd      string
+}
+
+func NewServer(hostname string, expected *[]Response) {
 	var err error
 	config := &ssh.ServerConfig{PasswordCallback: passwordCallback}
 	if err = parsePrivateKey(config, privateKey); err != nil {
 		log.Fatal(err)
 	}
-
 	listener, err := net.Listen("tcp", hostname)
 	if err != nil {
 		log.Fatal("failed on listener: ", err)
 	}
-
 	go acceptConnection(listener, config, expected)
 }
 
-func acceptConnection(listener net.Listener, config *ssh.ServerConfig, result string) {
+func acceptConnection(listener net.Listener, config *ssh.ServerConfig, responses *[]Response) {
 	for {
 		conn, err := listener.Accept()
 		if err != nil {
@@ -84,11 +88,14 @@ func acceptConnection(listener net.Listener, config *ssh.ServerConfig, result st
 			if err != nil {
 				log.Fatalf("error accepting channel: %v", err)
 			}
-
 			go handleRequest(requests, channel)
-
 			t := term.NewTerminal(channel, "")
-			_, err = t.Write([]byte(result))
+			resp, err := PopResponse(responses)
+			if err != nil {
+				stderr := channel.Stderr()
+				_, _ = fmt.Fprintf(stderr, "%v", err)
+			}
+			_, err = t.Write([]byte(resp))
 			if err != nil {
 				log.Fatalf("error writing channel: %v", err)
 			}
@@ -96,6 +103,12 @@ func acceptConnection(listener net.Listener, config *ssh.ServerConfig, result st
 			channel.Close() // nolint
 		}
 	}
+}
+
+func PopResponse(responses *[]Response) (string, error) {
+	var resp Response
+	resp, *responses = (*responses)[0], (*responses)[1:]
+	return resp.Response, resp.Error
 }
 
 func handleRequest(in <-chan *ssh.Request, channel ssh.Channel) {
@@ -115,11 +128,11 @@ func passwordCallback(meta ssh.ConnMetadata, pass []byte) (*ssh.Permissions, err
 	return nil, fmt.Errorf("invalid password")
 }
 
-func GetHostname(port string) string {
-	if port == "" {
-		port = "2022"
+func GetHostname(port int) string {
+	if port == 0 {
+		port = 2022
 	}
-	return fmt.Sprintf("%s:%s", "127.0.0.1", port)
+	return fmt.Sprintf("%s:%d", "127.0.0.1", port)
 }
 
 func parsePrivateKey(config *ssh.ServerConfig, key []byte) (err error) {
