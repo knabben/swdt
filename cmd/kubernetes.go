@@ -17,11 +17,6 @@ limitations under the License.
 package cmd
 
 import (
-	"log"
-	"swdt/apis/config/v1alpha1"
-	"swdt/pkg/pwsh/executor"
-	"swdt/pkg/pwsh/kubernetes"
-
 	"github.com/spf13/cobra"
 )
 
@@ -35,23 +30,27 @@ var kubernetesCmd = &cobra.Command{
 
 func RunKubernetes(cmd *cobra.Command, args []string) error {
 	var (
-		err    error
-		config *v1alpha1.Cluster
+	//err    error
+	//config *v1alpha1.Cluster
 	)
-	if config, err = loadConfiguration(cmd); err != nil {
-		return err
-	}
-
-	// Starting the executor
-	runner, err := executor.NewRunner(config.Spec.Workload.Virtualization.SSH, &kubernetes.KubernetesRunner{})
-	if err != nil {
-		return err
-	}
-	defer func(runner *executor.Runner[*kubernetes.KubernetesRunner]) {
-		if err := runner.CloseConnection(); err != nil {
-			log.Fatalf("error to close the connection: %v\n", err)
+	/*
+		if config, err = loadConfiguration(cmd); err != nil {
+			return err
 		}
-	}(runner)
 
-	return runner.Inner.InstallProvisioners(config.Spec.Workload.Provisioners)
+		// Starting the executor
+		runner, err := executor.NewRunner(config.Spec.Workload.Virtualization.SSH, &kubernetes.KubernetesRunner{})
+		if err != nil {
+			return err
+		}
+		defer func(runner *executor.Runner[*kubernetes.KubernetesRunner]) {
+			if err := runner.CloseConnection(); err != nil {
+				log.Fatalf("error to close the connection: %v\n", err)
+			}
+		}(runner)
+
+		return runner.Inner.InstallProvisioners(config.Spec.Workload.Provisioners)
+
+	*/
+	return nil
 }

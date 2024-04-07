@@ -23,11 +23,9 @@ import (
 	"strings"
 	"swdt/apis/config/v1alpha1"
 
-	"swdt/pkg/drivers"
-	"swdt/pkg/exec"
-
 	"github.com/spf13/cobra"
 	"libvirt.org/go/libvirt"
+	"swdt/pkg/drivers"
 )
 
 var (
@@ -55,11 +53,11 @@ func RunStart(cmd *cobra.Command, args []string) error {
 
 	// Start the minikube if the flag is enabled.
 	if config.Spec.ControlPlane.Minikube {
-		version := config.Spec.ControlPlane.KubernetesVersion
+		//version := config.Spec.ControlPlane.KubernetesVersion
 		klog.Info(resc.Sprintf("Starting a Minikube control plane, this operation can take a while..."))
-		if err := startMinikube(exec.RunCommand, version); err != nil {
+		/*if err := startMinikube(exec.RunCommand, version); err != nil {
 			return err
-		}
+		}*/
 	}
 
 	// Start the Windows VM on LibVirt
@@ -107,14 +105,15 @@ func startWindowsVM(config *v1alpha1.Cluster) error {
 // startMinikube initialize a minikube control plane.
 func startMinikube(executor interface{}, version string) (err error) {
 	// Start minikube with KVM2 machine
-	cmd := []string{
-		"minikube", "start", "--driver", "kvm2",
-		"--container-runtime", "containerd",
-		"--kubernetes-version", version,
-	}
-	if _, err = exec.Execute(executor, cmd...); err != nil {
-		return err
-	}
+	/*
+		cmd := []string{
+			"minikube", "start", "--driver", "kvm2",
+			"--container-runtime", "containerd",
+			"--kubernetes-version", version,
+		}
+		if _, err = exec.Execute(executor, cmd...); err != nil {
+			return err
+		}*/
 	return nil
 }
 

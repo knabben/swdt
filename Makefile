@@ -49,7 +49,7 @@ generate: controller-gen ## Generate code containing DeepCopy, DeepCopyInto, and
 
 .PHONY: test
 test:
-	go test ./... -v 2
+	go test -cover ./... -v 2
 
 .PHONY: build
 build:

@@ -17,7 +17,7 @@ spec:
         username: "Administrator"
         privateKey: "/home/aknabben/.ssh/id_rsa"
     auxiliary:
-      enableRDP: true
+      enableRDP: false
       chocoPackages:
     provisioners:
     - name: containerd
