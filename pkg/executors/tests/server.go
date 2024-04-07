@@ -95,7 +95,7 @@ func acceptConnection(listener net.Listener, config *ssh.ServerConfig, responses
 				stderr := channel.Stderr()
 				_, _ = fmt.Fprintf(stderr, "%v", err)
 			}
-			_, err = t.Write([]byte(resp))
+			_, err = channel.Write([]byte(resp))
 			if err != nil {
 				log.Fatalf("error writing channel: %v", err)
 			}

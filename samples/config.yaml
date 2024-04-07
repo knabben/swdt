@@ -6,7 +6,7 @@ spec:
   calicoVersion: v3.27.3
   controlPlane:
     kubernetesVersion: v1.28.3
-    minikube: false
+    minikube: true
   workload:
     containerdVersion: 1.7.14
     kubernetesVersion: v1.29.0

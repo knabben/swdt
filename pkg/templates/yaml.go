@@ -53,3 +53,13 @@ func GetSpecAffinity() (content []byte) {
 	content, _ = json.Marshal(data)
 	return
 }
+
+func SaveFile(content string) string {
+	fd, _ := os.CreateTemp("/tmp", "*yaml")
+	_, _ = fd.WriteString(content)
+	return fd.Name()
+}
+
+func DeleteFile(filename string) {
+	os.Remove(filename)
+}

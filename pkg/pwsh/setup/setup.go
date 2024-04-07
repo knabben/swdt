@@ -5,7 +5,9 @@ import (
 	"github.com/fatih/color"
 	"k8s.io/klog/v2"
 	"strings"
+	"swdt/pkg/executors/exec"
 	"swdt/pkg/executors/iface"
+	"swdt/pkg/templates"
 	"time"
 )
 
@@ -57,27 +59,6 @@ func (r *Runner) runRstd(args string, stdout *chan string) error {
 	return r.remote.Run(args, stdout)
 }
 
-func (r *Runner) enableOutput(output *string, fn func(std *chan string)) {
-	std := make(chan string)
-	fn(&std)
-	var outlist []string
-	for {
-		select {
-		case n, ok := <-std:
-			if !ok {
-				if output != nil {
-					*output = strings.Join(outlist, " ")
-				}
-				break
-			}
-			if output != nil {
-				outlist = append(outlist, n)
-			}
-			fmt.Println(n)
-		}
-	}
-}
-
 // ChocoExists check if choco is already installed in the system.
 func (r *Runner) ChocoExists() bool {
 	return r.runR(fmt.Sprintf("%s --version", CHOCO_PATH)) == nil
@@ -88,8 +69,8 @@ func (r *Runner) InstallChoco() error {
 	klog.Info(mainc.Sprint("Installing Choco with PowerShell."))
 
 	if r.Logging {
-		go r.enableOutput(nil, r.remote.Stdout)
-		go r.enableOutput(nil, r.remote.Stderr)
+		go exec.EnableOutput(nil, r.remote.Stdout)
+		go exec.EnableOutput(nil, r.remote.Stderr)
 	}
 
 	if r.ChocoExists() {
@@ -124,8 +105,8 @@ func (r *Runner) EnableRDP(enable bool) error {
 	}
 
 	if r.Logging {
-		go r.enableOutput(nil, r.remote.Stdout)
-		go r.enableOutput(nil, r.remote.Stderr)
+		go exec.EnableOutput(nil, r.remote.Stdout)
+		go exec.EnableOutput(nil, r.remote.Stderr)
 	}
 
 	klog.Info(mainc.Sprint("Enabling Remote Desktop."))
@@ -133,17 +114,20 @@ func (r *Runner) EnableRDP(enable bool) error {
 		Enable-NetFirewallRule -DisplayGroup 'Remote Desktop'`)
 }
 
-/*
 // InstallContainerd install the containerd bits with the set version, enabled required services.
 func (r *Runner) InstallContainerd(containerd string) error {
-	var output string
 	klog.Info(mainc.Sprintf("Installing containerd."))
-	go r.enableOutput(&output)
+
+	var output string
+	if r.Logging {
+		go exec.EnableOutput(nil, r.remote.Stdout)
+		go exec.EnableOutput(nil, r.remote.Stderr)
+	}
 
 	// Install containerd if service is not running.
-	if err := r.run("get-service -name containerd"); err != nil {
+	if err := r.runR("get-service -name containerd"); err != nil {
 		cmd := fmt.Sprintf(".\\Install-Containerd.ps1 -ContainerDVersion %s", containerd)
-		return r.run(`curl.exe -LO https://raw.githubusercontent.com/kubernetes-sigs/sig-windows-tools/master/hostprocess/Install-Containerd.ps1; ` + cmd)
+		return r.runR(`curl.exe -LO https://raw.githubusercontent.com/kubernetes-sigs/sig-windows-tools/master/hostprocess/Install-Containerd.ps1; ` + cmd)
 	} else if strings.Contains(output, "Running") {
 		klog.Info(resc.Sprintf("Skipping containerd installation, service already running, use the copy command."))
 	}
@@ -152,42 +136,43 @@ func (r *Runner) InstallContainerd(containerd string) error {
 
 // InstallKubernetes install all Kubernetes bits with the set version.
 func (r *Runner) InstallKubernetes(kubernetes string) error {
-	var output string
 	klog.Info(mainc.Sprintf("Installing Kubelet."))
-	go r.enableOutput(&output)
 
-	if err := r.run("get-service -name kubelet"); err != nil {
+	var output string
+	if r.Logging {
+		go exec.EnableOutput(nil, r.remote.Stdout)
+		go exec.EnableOutput(nil, r.remote.Stderr)
+	}
+
+	if err := r.runR("get-service -name kubelet"); err != nil {
 		// Install Kubernetes if service is not running.
 		cmd := fmt.Sprintf(".\\PrepareNode.ps1 -KubernetesVersion %s", kubernetes)
-		return r.run(`curl.exe -LO https://raw.githubusercontent.com/kubernetes-sigs/sig-windows-tools/master/hostprocess/PrepareNode.ps1; ` + cmd)
+		return r.runR(`curl.exe -LO https://raw.githubusercontent.com/kubernetes-sigs/sig-windows-tools/master/hostprocess/PrepareNode.ps1; ` + cmd)
 	} else if strings.Contains(output, "kubelet") { // Otherwise skip
 		klog.Info(resc.Sprintf("Skipping Kubelet installation, service already running, use the copy command."))
 	}
 	return nil
 }
 
-*/
 // JoinNode joins the Windows node into control-plane cluster.
 func (r *Runner) JoinNode(cpVersion, cpIPAddr string) error {
 	var (
-		err     error
-		output  string
-		loutput string
-		//lout   string
+		err             error
+		output, loutput string
 	)
 
-	go r.enableOutput(&output, r.remote.Stdout)
-	go r.enableOutput(&output, r.remote.Stderr)
-	go r.enableOutput(&loutput, r.local.Stdout)
+	go exec.EnableOutput(&output, r.remote.Stdout)
+	go exec.EnableOutput(&output, r.remote.Stderr)
+	go exec.EnableOutput(&loutput, r.local.Stdout)
 
 	// In case kubelet is already running, skip joining procedure.
 	if err = r.runR("get-service -name kubelet"); err == nil && !strings.Contains(output, "Running") {
+		fmt.Println("outputttt ", output)
 		// Control plane token create and extract, saving the final command
 		lcmd := strings.Join([]string{
-			"minikube", "ssh", "--", "sudo",
-			fmt.Sprintf("/var/lib/minikube/binaries/%s/kubeadm", cpVersion),
+			"minikube", "ssh", "--", "sudo", fmt.Sprintf("/var/lib/minikube/binaries/%s/kubeadm", cpVersion),
 			"token", "create", "--print-join-command",
-		}, "")
+		}, " ")
 		if err = r.runL(lcmd); err != nil {
 			return err
 		}
@@ -224,45 +209,50 @@ func (r *Runner) JoinNode(cpVersion, cpIPAddr string) error {
 	return nil
 }
 
-/*
 // InstallCNI installs Calico CNI receiving a specific version.
-func (r *SetupRunner) InstallCNI(calicoVersion string) error {
+func (r *Runner) InstallCNI(calicoVersion, controlPlaneIP string) error {
+	var loutput string
 
-		content, err := templates.OpenYamlFile("./specs/kube-proxy.yml")
-		if err != nil {
-			return err
-		}
+	go exec.EnableOutput(&loutput, r.local.Stdout)
+	go exec.EnableOutput(&loutput, r.local.Stderr)
 
-		fmt.Println(templates.ChangeTemplate(string(content), templates.KubeProxyTmpl{KUBERNETES_VERSION: calicoVersion}))
+	var (
+		err     error
+		content []byte
+	)
 
-		content, err = templates.OpenYamlFile("./specs/configmap.yml")
-		if err != nil {
-			return err
-		}
+	if content, err = templates.OpenYAMLFile("./specs/kube-proxy.yml"); err != nil {
+		return err
+	}
+	kpTmpl := templates.KubeProxyTmpl{KUBERNETES_VERSION: calicoVersion}
+	t, _ := templates.ChangeTemplate(string(content), kpTmpl)
+	kpTempFile := templates.SaveFile(t)
+	defer templates.DeleteFile(kpTempFile)
 
-		fmt.Println(templates.ChangeTemplate(string(content), templates.ConfigMapTmpl{KUBERNETES_SERVICE_HOST: "bla", KUBERNETES_SERVICE_PORT: "45654"}))
+	if content, err = templates.OpenYAMLFile("./specs/configmap.yml"); err != nil {
+		return err
+	}
+	cpTmpl := templates.ConfigMapTmpl{KUBERNETES_SERVICE_HOST: controlPlaneIP, KUBERNETES_SERVICE_PORT: "8443"}
+	t, _ = templates.ChangeTemplate(string(content), cpTmpl)
+	cpTempFile := templates.SaveFile(t)
+	defer templates.DeleteFile(cpTempFile)
 
 	// Execute Kubernetes steps for Calico installation
 	steps := [][]string{
-		{"kubectl", "patch", "ipamconfigurations", "default", "--type", "merge", "--patch=" + string(templates.GetSpecAffinity())},
 		{"kubectl", "config", "set-context", "minikube"},
-		//{"kubectl", "create", "-f", fmt.Sprintf("https://raw.githubusercontent.com/projectcalico/calico/%v/manifests/tigera-operator.yaml", calicoVersion)},
-		//{"cat", "<<EOF", "|", "kubectl", "apply", "-f", "-", "apiServer:\nEOF"},
-			// Render the configmap with content
-			{"kubectl", "create", "-f", "./specs/configmap.yml"},
-			{"kubectl", "create", "-f", "./specs/installation.yaml"},
-			{"kubectl", "create", "-f", "./specs/apiserver.yaml"},
-		//{curl -L  https://raw.githubusercontent.com/kubernetes-sigs/sig-windows-tools/master/hostprocess/calico/kube-proxy/kube-proxy.yml | sed "s/KUBE_PROXY_VERSION/v1.27.3/g" | kubectl apply -f -
+		{"kubectl", "create", "-f", fmt.Sprintf("https://raw.githubusercontent.com/projectcalico/calico/%v/manifests/tigera-operator.yaml", calicoVersion)},
+		{"kubectl", "create", "-f", "./specs/installation.yaml"},
+		{"kubectl", "create", "-f", cpTempFile},
+		{"kubectl", "create", "-f", kpTempFile},
+		{"kubectl", "patch", "ipamconfigurations", "default", "--type", "merge", "--patch=" + string(templates.GetSpecAffinity())},
 	}
-
 	for i := 0; i <= len(steps)-1; i++ {
-		resc.Printf("Running: %v\n", strings.Join(steps[i], " "))
-		if stdout, err := exec.Execute(exec.RunCommand, steps[i]...); err != nil {
-			bad.Println(err.Error())
-		} else {
-			fmt.Println(stdout)
+		cmd := strings.Join(steps[i], " ")
+		resc.Printf("Running: %v\n", cmd)
+		if err := r.runL(cmd); err != nil {
+			bad.Printf("%v", err)
 		}
 	}
+
 	return nil
 }
-*/

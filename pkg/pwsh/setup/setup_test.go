@@ -1,9 +1,11 @@
 package setup
 
 import (
+	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
 	"swdt/apis/config/v1alpha1"
 	"swdt/pkg/executors/exec"
+	"swdt/pkg/executors/iface"
 	"swdt/pkg/executors/tests"
 	"testing"
 )
@@ -12,20 +14,6 @@ var (
 	calls []string
 	port  = 2222
 )
-
-func assertCalls(t *testing.T, rcalls []string) {
-	assert.Len(t, calls, len(rcalls))
-	for idx, call := range rcalls {
-		assert.Contains(t, calls[idx], call)
-	}
-}
-
-func extractCmds(responses *[]tests.Response) (cmds []string) {
-	for i := 0; i <= len(*responses)-1; i++ {
-		cmds = append(cmds, (*responses)[i].Cmd)
-	}
-	return cmds
-}
 
 // startServer starts a fake SSH server
 func StartServer(port int, expected *[]tests.Response) *v1alpha1.SSHSpec {
@@ -38,14 +26,34 @@ func StartServer(port int, expected *[]tests.Response) *v1alpha1.SSHSpec {
 	}
 }
 
-func startRunner(responses *[]tests.Response, port int) (*Runner, error) {
+type LocalExec struct {
+	stdout *chan string
+}
+
+func (l LocalExec) Run(args string, stdout *chan string) error {
+	return nil
+}
+
+func (l LocalExec) Stdout(std *chan string) {
+	l.stdout = std
+}
+
+func (l LocalExec) Stderr(std *chan string) {
+	panic("implement me")
+}
+
+func NewLocalExecutor() iface.Executor {
+	return &LocalExec{}
+}
+
+func startRunner(responses *[]tests.Response) (*Runner, error) {
 	calls = []string{}
 	credentials := StartServer(port, responses)
 	var sshExec = exec.NewSSHExecutor(credentials) // Start SSH Connection
 	if err := sshExec.Connect(); err != nil {
 		return nil, err
 	}
-	return &Runner{remote: sshExec}, nil
+	return &Runner{remote: sshExec, local: NewLocalExecutor()}, nil
 }
 
 func TestChocoExist(t *testing.T) {
@@ -55,7 +63,8 @@ func TestChocoExist(t *testing.T) {
 			Error:    nil,
 		},
 	}
-	r, err := startRunner(responses, port+1)
+	port += 1
+	r, err := startRunner(responses)
 	assert.Nil(t, err)
 	assert.True(t, r.ChocoExists())
 }
@@ -75,7 +84,8 @@ func TestInstallChocoPackages(t *testing.T) {
 			Error:    nil,
 		},
 	}
-	r, err := startRunner(responses, port+1)
+	port += 1
+	r, err := startRunner(responses)
 	assert.Nil(t, err)
 	config := v1alpha1.AuxiliarySpec{ChocoPackages: &[]string{"vim", "grep"}}
 	assert.Nil(t, r.InstallChocoPackages(*config.ChocoPackages))
@@ -89,124 +99,110 @@ func TestEnableRDP(t *testing.T) {
 			Error:    nil,
 		},
 	}
-	r, err := startRunner(responses, port+1)
+	port += 1
+	r, err := startRunner(responses)
 	assert.Nil(t, err)
 	config := v1alpha1.AuxiliarySpec{EnableRDP: &defaultTrue}
 	assert.Nil(t, r.EnableRDP(*config.EnableRDP))
 }
 
-/*
 func TestInstallContainerdSkip(t *testing.T) {
-	responses := &[]Response{
+	responses := &[]tests.Response{
 		{
-			response: "Running",
-			error:    nil,
+			Response: "Running",
+			Error:    nil,
 		},
 		{
-			response: "",
-			error:    errors.New("error"),
+			Response: "",
+			Error:    errors.New("error"),
 		},
 	}
-	r := startRunner(responses)
+	port += 1
+	r, err := startRunner(responses)
+	assert.Nil(t, err)
 	config := v1alpha1.ClusterSpec{CalicoVersion: "v3.27"}
-	err := r.InstallContainerd(config.CalicoVersion)
+	err = r.InstallContainerd(config.CalicoVersion)
 	assert.Nil(t, err)
 }
 
 func TestInstallContainerdRunning(t *testing.T) {
-	responses := &[]Response{
+	responses := &[]tests.Response{
 		{
-			response: "",
-			error:    errors.New(""),
+			Response: "",
+			Error:    errors.New(""),
 		},
 		{
-			response: "",
-			error:    nil,
+			Response: "",
+			Error:    nil,
 		},
 	}
 
-	r := startRunner(responses)
-	err := r.InstallContainerd("v3.27")
+	port += 1
+	r, err := startRunner(responses)
 	assert.Nil(t, err)
-	assertCalls(t, []string{
-		"get-service -name containerd", ".\\Install-Containerd",
-	})
+	err = r.InstallContainerd("v3.27")
+	assert.Nil(t, err)
 }
 
 func TestInstallKubernetes(t *testing.T) {
-	responses := &[]Response{
+	responses := &[]tests.Response{
 		{
-			response: "",
-			error:    errors.New(""),
-			cmd:      "get-service -name kubelet",
+			Response: "",
+			Error:    errors.New(""),
+			Cmd:      "get-service -name kubelet",
 		},
 		{
-			response: "",
-			error:    nil,
-			cmd:      ".\\PrepareNode.ps1 -KubernetesVersion v1.29.0",
+			Response: "",
+			Error:    nil,
+			Cmd:      ".\\PrepareNode.ps1 -KubernetesVersion v1.29.0",
 		},
 	}
-	cmds := extractCmds(responses)
-	r := startRunner(responses)
-	err := r.InstallKubernetes("v1.29.0")
+	port += 1
+	r, err := startRunner(responses)
 	assert.Nil(t, err)
-	assertCalls(t, cmds)
-}
 
-func TestJoinNodeSkip(t *testing.T) {
-	responses := &[]Response{
-		{
-			response: "Running",
-			error:    nil,
-			cmd:      "get-service -name kubelet",
-		},
-	}
-	cmds := extractCmds(responses)
-	r := startRunner(responses)
-	err := r.JoinNode(nil, "v1.29.0", "192.168.0.1")
+	err = r.InstallKubernetes("v1.29.0")
 	assert.Nil(t, err)
-	assertCalls(t, cmds)
 }
 
 func TestJoinNodeRunner(t *testing.T) {
-	responses := &[]Response{
+	responses := &[]tests.Response{
 		{
-			response: "Stopped",
-			error:    nil,
-			cmd:      "get-service -name kubelet",
+			Response: "Stopped",
+			Error:    nil,
+			Cmd:      "get-service -name kubelet",
 		},
 		{
-			response: "",
-			error:    nil,
-			cmd:      "mkdir",
+			Response: "",
+			Error:    nil,
+			Cmd:      "mkdir",
 		},
 		{
-			response: "",
-			error:    nil,
-			cmd:      "Add-content",
+			Response: "",
+			Error:    nil,
+			Cmd:      "Add-content",
 		},
 		{
-			response: "",
-			error:    nil,
-			cmd:      "$env:Path",
+			Response: "",
+			Error:    nil,
+			Cmd:      "$env:Path",
 		},
 	}
-	cmds := extractCmds(responses)
-	r := startRunner(responses)
-	fn := func(cmd ...string) (string, error) {
-		return "", nil
-	}
-	err := r.JoinNode(fn, "v1.29.0", "192.168.0.1")
+	port += 1
+	r, err := startRunner(responses)
 	assert.Nil(t, err)
-	assertCalls(t, cmds)
+	err = r.JoinNode("v1.29.0", "192.168.0.1")
+	assert.Nil(t, err)
 }
 
 func TestInstallCNI(t *testing.T) {
 	_ = func(cmd string) (string, error) {
 		return "", nil
 	}
-	//_, _ = SetupRunner{run: fn}
-	//err := r.InstallCNI("v3.27.3")
-	//assert.Nil(t, err)
+	port += 1
+	responses := []tests.Response{}
+	r, err := startRunner(&responses)
+	assert.Nil(t, err)
+	err = r.InstallCNI("v3.27.3", "192.168.0.1")
+	assert.Nil(t, err)
 }
-*/

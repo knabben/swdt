@@ -22,6 +22,7 @@ import (
 	"log"
 	"strings"
 	"swdt/apis/config/v1alpha1"
+	"swdt/pkg/executors/exec"
 
 	"github.com/spf13/cobra"
 	"libvirt.org/go/libvirt"
@@ -53,11 +54,11 @@ func RunStart(cmd *cobra.Command, args []string) error {
 
 	// Start the minikube if the flag is enabled.
 	if config.Spec.ControlPlane.Minikube {
-		//version := config.Spec.ControlPlane.KubernetesVersion
+		version := config.Spec.ControlPlane.KubernetesVersion
 		klog.Info(resc.Sprintf("Starting a Minikube control plane, this operation can take a while..."))
-		/*if err := startMinikube(exec.RunCommand, version); err != nil {
+		if err := startMinikube(version); err != nil {
 			return err
-		}*/
+		}
 	}
 
 	// Start the Windows VM on LibVirt
@@ -72,13 +73,11 @@ func startWindowsVM(config *v1alpha1.Cluster) error {
 		err error
 	)
 
+	log.Println("Creating domain...")
 	drv, err := drivers.NewDriver(config)
 	if err != nil {
 		return err
 	}
-
-	log.Println("Creating domain...")
-
 	// Create the libvirt domain
 	if dom, err = drv.CreateDomain(); err != nil {
 		// Domain already exists, skipping the Windows creation.
@@ -95,26 +94,20 @@ func startWindowsVM(config *v1alpha1.Cluster) error {
 	}()
 
 	// Start the Windows created domain.
-	if err = drv.KvmDriver.Start(); err != nil {
-		return err
-	}
-
-	return nil
+	return drv.KvmDriver.Start()
 }
 
 // startMinikube initialize a minikube control plane.
-func startMinikube(executor interface{}, version string) (err error) {
+func startMinikube(version string) (err error) {
 	// Start minikube with KVM2 machine
-	/*
-		cmd := []string{
-			"minikube", "start", "--driver", "kvm2",
-			"--container-runtime", "containerd",
-			"--kubernetes-version", version,
-		}
-		if _, err = exec.Execute(executor, cmd...); err != nil {
-			return err
-		}*/
-	return nil
+	cmd := strings.Join([]string{
+		"minikube", "start", "--driver", "kvm2",
+		"--container-runtime", "containerd",
+		"--kubernetes-version", version,
+	}, " ")
+	e := exec.NewLocalExecutor()
+	go exec.EnableOutput(nil, e.Stdout)
+	return e.Run(cmd, nil)
 }
 
 func alreadyExists(err error) bool {

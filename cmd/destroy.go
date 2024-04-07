@@ -20,6 +20,7 @@ import (
 	"github.com/spf13/cobra"
 	"swdt/apis/config/v1alpha1"
 	"swdt/pkg/drivers"
+	"swdt/pkg/executors/exec"
 )
 
 // destroyCmd represents the destroy command
@@ -46,10 +47,9 @@ func RunDestroy(cmd *cobra.Command, args []string) error {
 	}
 
 	if config.Spec.ControlPlane.Minikube {
-		// Delete minikube
-		/*if _, err = exec.Execute(exec.RunCommand, "minikube", "delete", "--purge"); err != nil {
-			return err
-		}*/
+		e := exec.NewLocalExecutor()
+		go exec.EnableOutput(nil, e.Stdout)
+		return e.Run("minikube delete --purge", nil)
 	}
 	return nil
 }

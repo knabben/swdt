@@ -62,6 +62,9 @@ func RunSetup(cmd *cobra.Command, args []string) error {
 
 	ssh := config.Spec.Workload.Virtualization.SSH
 	r, err := ifacer.NewRunner(ssh, &setup.Runner{Logging: true})
+	if err != nil {
+		return err
+	}
 
 	// Install choco binary and packages if a list of packages exists
 	if len(*config.Spec.Workload.Auxiliary.ChocoPackages) > 0 {
@@ -80,33 +83,27 @@ func RunSetup(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	/*
-		// Installing Containerd with predefined version
-		containerd := config.Spec.Workload.ContainerdVersion
-		if err = setupRunner.InstallContainerd(containerd); err != nil {
-			return err
-		}
+	// Installing Containerd with predefined version
+	containerd := config.Spec.Workload.ContainerdVersion
+	if err = r.Inner.InstallContainerd(containerd); err != nil {
+		return err
+	}
 
-			// Installing Kubeadm and Kubelet binaries in the host
-			kubernetes := config.Spec.Workload.KubernetesVersion
-			if err = runner.Inner.InstallKubernetes(kubernetes); err != nil {
-				return err
-			}
+	// Installing Kubeadm and Kubelet binaries in the host
+	kubernetes := config.Spec.Workload.KubernetesVersion
+	if err = r.Inner.InstallKubernetes(kubernetes); err != nil {
+		return err
+	}
 
-	*/
 	// Joining the Windows node in the control plane.
 	cpKubernetes := config.Spec.ControlPlane.KubernetesVersion
 	if err = r.Inner.JoinNode(cpKubernetes, controlPlaneIP); err != nil {
 		return err
 	}
-	/*
-		// Install Calico CNI operator and CR
-		// NOTE: Only Calico is supported for now on HPC
-		/*if err = runner.Inner.InstallCNI(config.Spec.CalicoVersion); err != nil {
-			return err
-		}*/
 
-	return nil
+	// Install Calico CNI operator and CR
+	// NOTE: Only Calico is supported for now on HPC
+	return r.Inner.InstallCNI(config.Spec.CalicoVersion, controlPlaneIP)
 }
 
 // findPrivateIPs returns the leased ips from the domain.

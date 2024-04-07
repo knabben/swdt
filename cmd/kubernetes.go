@@ -18,6 +18,9 @@ package cmd
 
 import (
 	"github.com/spf13/cobra"
+	"swdt/apis/config/v1alpha1"
+	ifacer "swdt/pkg/pwsh/iface"
+	"swdt/pkg/pwsh/kubernetes"
 )
 
 // setupCmd represents the setup command
@@ -30,27 +33,19 @@ var kubernetesCmd = &cobra.Command{
 
 func RunKubernetes(cmd *cobra.Command, args []string) error {
 	var (
-	//err    error
-	//config *v1alpha1.Cluster
+		err    error
+		config *v1alpha1.Cluster
 	)
-	/*
-		if config, err = loadConfiguration(cmd); err != nil {
-			return err
-		}
+	if config, err = loadConfiguration(cmd); err != nil {
+		return err
+	}
 
-		// Starting the executor
-		runner, err := executor.NewRunner(config.Spec.Workload.Virtualization.SSH, &kubernetes.KubernetesRunner{})
-		if err != nil {
-			return err
-		}
-		defer func(runner *executor.Runner[*kubernetes.KubernetesRunner]) {
-			if err := runner.CloseConnection(); err != nil {
-				log.Fatalf("error to close the connection: %v\n", err)
-			}
-		}(runner)
+	// Starting the executor
+	ssh := config.Spec.Workload.Virtualization.SSH
+	r, err := ifacer.NewRunner(ssh, &kubernetes.Runner{})
+	if err != nil {
+		return err
+	}
 
-		return runner.Inner.InstallProvisioners(config.Spec.Workload.Provisioners)
-
-	*/
-	return nil
+	return r.Inner.InstallProvisioners(config.Spec.Workload.Provisioners)
 }
