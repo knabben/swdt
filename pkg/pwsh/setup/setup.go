@@ -247,6 +247,7 @@ func (r *Runner) InstallCNI(calicoVersion, cpKubernetes, controlPlaneIP string) 
 		{"kubectl", "create", "-f", "./specs/installation.yaml"},
 		{"kubectl", "create", "-f", cpTempFile},
 		{"kubectl", "create", "-f", kpTempFile},
+		{"kubectl", "create", "-f", "./specs/smoke-test.yaml"},
 	}
 
 	for i := 0; i <= len(steps)-1; i++ {
