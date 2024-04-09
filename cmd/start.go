@@ -101,12 +101,16 @@ func startWindowsVM(config *v1alpha1.Cluster) error {
 func startMinikube(version string) (err error) {
 	// Start minikube with KVM2 machine
 	cmd := strings.Join([]string{
-		"minikube", "start", "--driver", "kvm2",
-		"--container-runtime", "containerd",
-		"--kubernetes-version", version,
+		"minikube", "start", "--driver", "kvm2", // KVM Driver
+        "--network-plugin", "cni", 
+        "--cni", "false",  // no CNI
+        "--extra-config","kubeadm.pod-network-cidr=192.168.0.0/16",
+        "subnet", "172.16.0.0/24",
+		"--kubernetes-version", version,  // Kubernetes Version
 	}, " ")
 	e := exec.NewLocalExecutor()
 	go exec.EnableOutput(nil, e.Stdout)
+	go exec.EnableOutput(nil, e.Stderr)
 	return e.Run(cmd, nil)
 }
 
